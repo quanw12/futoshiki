@@ -1,7 +1,7 @@
 """Shared Futoshiki types, I/O, and CSP helpers for solvers and GUI."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
 Cell = Tuple[int, int]
@@ -22,6 +22,8 @@ class SolveResult:
     nodes_expanded: int
     memory_kb: float
     contradiction: bool = False
+    # Optional diagnostics for GUI / demos (backward compatible defaults).
+    messages: List[str] = field(default_factory=list)
 
 
 def parse_csv_line(line: str) -> List[int]:
