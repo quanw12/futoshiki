@@ -9,6 +9,7 @@ BTVN/
   source/
     main.py
     gui.py
+    gui_pygame.py
     futoshiki_core.py
     solvers.py
     ground_kb.py
@@ -33,13 +34,33 @@ Export a grounded CNF (DIMACS) for the same puzzle:
 python source/main.py --input inputs/input-01.txt --export-dimacs outputs/puzzle-01.dimacs
 ```
 
-## GUI (optional)
+## GUI (optional +10%)
+
+Install optional dependencies (Pygame GUI):
+
+```bash
+pip install -r requirements.txt
+```
+
+### Tkinter GUI (stdlib + tk only)
 
 ```bash
 python source/gui.py
 ```
 
-Open an `input-*.txt` file, choose an algorithm, then **Solve**. You can save the formatted solution to a text file.
+Tkinter ships with CPython (on Linux you may need `python3-tk`). Same features as below, drawn with Tk `Canvas`.
+
+### Pygame GUI (mockup-style)
+
+```bash
+python source/gui_pygame.py
+```
+
+Uses **Pygame** for rendering: rounded cells, white inequality symbols, dark panels, orange-highlighted algorithm row, cyan outline on **STEP-BY-STEP**, colored scrollable log, and metrics including **Solution valid** (YES / NO / In progress). File open/save still uses **Tkinter** dialogs (`withdraw()` root).
+
+Both GUIs share the same behavior: **three columns**, load `input-*.txt`, pick an algorithm, **Solve** (calls `solve()` like the CLI), **Step-by-step** replay after a successful solve, optional save.
+
+For the assignment **demonstration video**, start from the **command line** (show `main.py` and the input file), then optionally open a GUI to show the grid and metrics.
 
 Supported algorithms:
 - `forward`
