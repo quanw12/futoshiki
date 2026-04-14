@@ -8,7 +8,7 @@ import math
 import os
 import time
 
-from PySide6.QtCore import QTimer, Qt, QRectF, QPointF, QVariantAnimation, QEasingCurve, QRect, QPropertyAnimation, QParallelAnimationGroup
+from PySide6.QtCore import QTimer, Qt, QRectF, QPointF, QPoint, QVariantAnimation, QEasingCurve, QRect, QPropertyAnimation, QParallelAnimationGroup
 from PySide6.QtGui import (
     QAction,
     QColor,
@@ -21,7 +21,6 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QApplication,
-    QButtonGroup,
     QFileDialog,
     QFrame,
     QGraphicsDropShadowEffect,
@@ -33,11 +32,11 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
-    QRadioButton,
     QTextEdit,
     QVBoxLayout,
     QWidget,
-    QComboBox,
+    QStyle,
+    QStyleOptionButton,
 )
 
 from futoshiki_core import Puzzle, inequality_ok, is_valid_solution, read_input, write_output
@@ -117,8 +116,8 @@ class LiquidButton(QPushButton):
         self._hover_anim.valueChanged.connect(self._apply_anim_value)
         self._anim_value = 0.0
         self._press_anim = QVariantAnimation(self)
-        self._press_anim.setDuration(130)
-        self._press_anim.setEasingCurve(QEasingCurve.OutCubic)
+        self._press_anim.setDuration(100)
+        self._press_anim.setEasingCurve(QEasingCurve.OutQuint)
         self._press_anim.valueChanged.connect(self._apply_press_value)
         self._press_value = 0.0
         self._fx_phase = 0.0
@@ -162,6 +161,8 @@ class LiquidButton(QPushButton):
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: N802
         self._press_anim.stop()
+        self._press_anim.setDuration(180)
+        self._press_anim.setEasingCurve(QEasingCurve.OutBack)
         self._press_anim.setStartValue(self._press_value)
         self._press_anim.setEndValue(0.0)
         self._press_anim.start()
@@ -169,17 +170,18 @@ class LiquidButton(QPushButton):
 
     def _apply_anim_value(self, v: float) -> None:
         self._anim_value = float(v)
-        blur = 18.0 + 13.0 * self._anim_value
+        blur = 18.0 + 6.0 * self._anim_value
         self._shadow.setBlurRadius(blur)
-        self._shadow.setOffset(0, 6 + 2.4 * self._anim_value)
+        self._shadow.setOffset(0, 6 + 1.2 * self._anim_value)
         # gradient/brighter border is handled in global QSS via :hover,
         # this animation adds smooth shadow "liquid" response.
 
     def _apply_press_value(self, v: float) -> None:
         self._press_value = float(v)
-        # click bounce feel without repaint artifacts from custom painting
-        self._shadow.setOffset(0, 6 + 2.4 * self._anim_value - 2.0 * self._press_value)
-        self._shadow.setBlurRadius(18.0 + 13.0 * self._anim_value - 4.0 * self._press_value)
+        # Stronger "pressed down" depth, closer to board-cell click feel.
+        self._shadow.setOffset(0, 6 + 1.2 * self._anim_value - 3.8 * self._press_value)
+        self._shadow.setBlurRadius(18.0 + 6.0 * self._anim_value - 8.0 * self._press_value)
+        self.update()
 
     def _tick_fx(self) -> None:
         self._fx_phase = (self._fx_phase + 0.05) % (2.0 * math.pi)
@@ -194,9 +196,18 @@ class LiquidButton(QPushButton):
             self._fx_timer.stop()
 
     def paintEvent(self, event) -> None:  # noqa: N802
-        super().paintEvent(event)
+        option = QStyleOptionButton()
+        self.initStyleOption(option)
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing, True)
+        cx = self.width() * 0.5
+        cy = self.height() * 0.5
+        scale_x = 1.0 - 0.015 * self._press_value
+        scale_y = 1.0 + 0.02 * self._anim_value - 0.055 * self._press_value
+        p.translate(cx, cy)
+        p.scale(scale_x, scale_y)
+        p.translate(-cx, -cy)
+        self.style().drawControl(QStyle.CE_PushButton, option, p, self)
         rr = 11.0
         clip = QPainterPath()
         clip.addRoundedRect(QRectF(1.0, 1.0, self.width() - 2.0, self.height() - 2.0), rr, rr)
@@ -235,9 +246,165 @@ class LiquidButton(QPushButton):
             p.setBrush(rg)
             p.drawEllipse(QPointF(rp.x, rp.y), rad, rad)
 
+        if self._press_value > 0.001:
+            press_alpha = int(86 * self._press_value)
+            p.fillRect(self.rect(), QColor(6, 16, 28, press_alpha))
+            p.setPen(QPen(QColor(0, 0, 0, int(95 * self._press_value)), 1.2))
+            p.setBrush(Qt.NoBrush)
+            p.drawRoundedRect(QRectF(2.2, 2.2, self.width() - 4.4, self.height() - 4.4), 10.5, 10.5)
+
         # Top gloss edge
         p.setPen(QPen(QColor(255, 255, 255, 80), 1.0))
         p.drawLine(12, 2, self.width() - 12, 2)
+
+
+class ClickModeToggle(QFrame):
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("clickModeToggle")
+        self.setMinimumHeight(42)
+        self._mode = "cycle"
+        self._thumb = QFrame(self)
+        self._thumb.setObjectName("clickModeThumb")
+        self._anim = QPropertyAnimation(self._thumb, b"pos", self)
+        self._anim.setDuration(260)
+        self._anim.setEasingCurve(QEasingCurve.OutQuint)
+
+        self.btn_cycle = QPushButton("Cycle", self)
+        self.btn_selector = QPushButton("Selector", self)
+        for b in (self.btn_cycle, self.btn_selector):
+            b.setObjectName("clickModeBtn")
+            b.setCursor(Qt.PointingHandCursor)
+            b.setFlat(True)
+
+        self.btn_cycle.clicked.connect(lambda: self.set_mode("cycle", True))
+        self.btn_selector.clicked.connect(lambda: self.set_mode("selector", True))
+        self._apply_button_state()
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self._layout_children(False)
+
+    def mode(self) -> str:
+        return self._mode
+
+    def set_mode(self, mode: str, animate: bool) -> None:
+        if mode not in {"cycle", "selector"}:
+            return
+        old_mode = self._mode
+        self._mode = mode
+        self._apply_button_state()
+        if self.width() < 40 or mode == old_mode:
+            return
+        self._layout_children(animate)
+
+    def _layout_children(self, animate: bool) -> None:
+        pad = 3
+        w = max(2, self.width() - pad * 2)
+        h = max(2, self.height() - pad * 2)
+        half = w // 2
+        self.btn_cycle.setGeometry(pad, pad, half, h)
+        self.btn_selector.setGeometry(pad + half, pad, w - half, h)
+        thumb_w = half - 2
+        thumb_h = h - 2
+        target_x = pad + 1 if self._mode == "cycle" else pad + half + 1
+        target_pos = QPoint(target_x, pad + 1)
+        self._thumb.resize(thumb_w, thumb_h)
+        self._thumb.raise_()
+        self.btn_cycle.raise_()
+        self.btn_selector.raise_()
+        if animate:
+            self._anim.stop()
+            self._anim.setStartValue(self._thumb.pos())
+            self._anim.setEndValue(target_pos)
+            self._anim.start()
+        else:
+            self._thumb.move(target_pos)
+
+    def _apply_button_state(self) -> None:
+        self.btn_cycle.setProperty("active", self._mode == "cycle")
+        self.btn_selector.setProperty("active", self._mode == "selector")
+        for b in (self.btn_cycle, self.btn_selector):
+            b.style().unpolish(b)
+            b.style().polish(b)
+
+
+class AlgoVerticalToggle(QFrame):
+    def __init__(self, items: List[Tuple[str, str]], default_key: str, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("algoToggle")
+        self._items = items
+        self._buttons: List[QPushButton] = []
+        self._selected_key = default_key
+        self._thumb = QFrame(self)
+        self._thumb.setObjectName("algoToggleThumb")
+        self._anim = QPropertyAnimation(self._thumb, b"pos", self)
+        self._anim.setDuration(280)
+        self._anim.setEasingCurve(QEasingCurve.OutQuint)
+
+        for key, label in items:
+            btn = QPushButton(label, self)
+            btn.setObjectName("algoToggleBtn")
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setFlat(True)
+            btn.clicked.connect(lambda checked=False, k=key: self.set_key(k, True))
+            self._buttons.append(btn)
+
+        self.setMinimumHeight(len(items) * 38 + 8)
+        self._apply_button_state()
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self._layout_children(False)
+
+    def selected_key(self) -> str:
+        return self._selected_key
+
+    def set_key(self, key: str, animate: bool) -> None:
+        if key not in [k for k, _ in self._items]:
+            return
+        old = self._selected_key
+        self._selected_key = key
+        self._apply_button_state()
+        if old != key:
+            self._layout_children(animate)
+
+    def _layout_children(self, animate: bool) -> None:
+        if not self._buttons:
+            return
+        pad = 3
+        w = max(2, self.width() - pad * 2)
+        h = max(2, self.height() - pad * 2)
+        slot_h = max(2, h // len(self._buttons))
+        for idx, btn in enumerate(self._buttons):
+            top = pad + idx * slot_h
+            btn_h = slot_h if idx < len(self._buttons) - 1 else h - slot_h * (len(self._buttons) - 1)
+            btn.setGeometry(pad, top, w, btn_h)
+        sel_idx = 0
+        for idx, (k, _) in enumerate(self._items):
+            if k == self._selected_key:
+                sel_idx = idx
+                break
+        target_y = pad + sel_idx * slot_h + 1
+        target_pos = QPoint(pad + 1, target_y)
+        self._thumb.resize(w - 2, slot_h - 2)
+        self._thumb.raise_()
+        for btn in self._buttons:
+            btn.raise_()
+        if animate:
+            self._anim.stop()
+            self._anim.setStartValue(self._thumb.pos())
+            self._anim.setEndValue(target_pos)
+            self._anim.start()
+        else:
+            self._thumb.move(target_pos)
+
+    def _apply_button_state(self) -> None:
+        for idx, btn in enumerate(self._buttons):
+            key = self._items[idx][0]
+            btn.setProperty("active", key == self._selected_key)
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
 
 
 class AnimatedFileDialog(QFileDialog):
@@ -828,6 +995,7 @@ class FutoshikiQtWindow(QMainWindow):
         self.auto_timer = QTimer(self)
         self.auto_timer.timeout.connect(self._auto_tick)
         self.auto_interval_ms = 180
+        self.auto_batch_steps = 1
         self.auto_play = False
 
         self.metric_cells = QLabel("—")
@@ -885,19 +1053,11 @@ class FutoshikiQtWindow(QMainWindow):
         mv.addWidget(QLabel("Puzzle Size"))
         mv.addWidget(self.size_label)
         mv.addWidget(QLabel("Click Mode"))
-        self.click_mode = QComboBox()
-        self.click_mode.addItems(["cycle", "selector"])
+        self.click_mode = ClickModeToggle()
         mv.addWidget(self.click_mode)
         mv.addWidget(QLabel("Solver Algorithm"))
-
-        self.algo_group = QButtonGroup(self)
-        for key, label in ALGOS:
-            rb = QRadioButton(label)
-            if key == "astar":
-                rb.setChecked(True)
-            rb.setProperty("algo_key", key)
-            self.algo_group.addButton(rb)
-            mv.addWidget(rb)
+        self.algo_toggle = AlgoVerticalToggle(ALGOS, default_key="astar")
+        mv.addWidget(self.algo_toggle)
         mv.addStretch(1)
 
         self.btn_load = LiquidButton("Load Input File")
@@ -905,7 +1065,8 @@ class FutoshikiQtWindow(QMainWindow):
         self.btn_auto = LiquidButton("Auto Replay")
         self.btn_save = LiquidButton("Save Solution")
         for b in (self.btn_load, self.btn_solve, self.btn_auto, self.btn_save):
-            mv.addWidget(b)
+            b.setFixedWidth(210)
+            mv.addWidget(b, 0, Qt.AlignHCenter)
         self.path_label = QLabel("")
         self.path_label.setWordWrap(True)
         mv.addWidget(self.path_label)
@@ -945,16 +1106,77 @@ class FutoshikiQtWindow(QMainWindow):
             QLabel#title { color: #F2F6FF; font: 700 26px 'Inter'; }
             QLabel#legend { color: #9BB0D4; font: 12px 'Inter'; }
             QLabel { color: #C0CAE3; font: 13px 'Inter'; }
-            QRadioButton { color: #D6E1FA; spacing: 8px; }
-            QRadioButton::indicator { width: 12px; height: 12px; }
-            QRadioButton::indicator:unchecked { border: 1px solid #7382A5; border-radius: 6px; background: #1D2230; }
-            QRadioButton::indicator:checked { border: 1px solid #62B5FF; border-radius: 6px; background: #0A84FF; }
-            QComboBox {
-                background: rgba(36,40,51,180);
-                color: #EAF2FF;
-                border: 1px solid rgba(115,130,165,140);
+            QFrame#algoToggle {
+                background: rgba(37, 54, 79, 190);
+                border: 1px solid rgba(98, 132, 182, 170);
+                border-radius: 14px;
+            }
+            QFrame#algoToggleThumb {
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                                            stop:0 rgba(98, 184, 255, 255),
+                                            stop:0.52 rgba(43, 145, 242, 252),
+                                            stop:1 rgba(10, 132, 255, 248));
+                border: 1px solid rgba(104, 184, 255, 240);
                 border-radius: 12px;
-                padding: 6px 10px;
+            }
+            QPushButton#algoToggleBtn {
+                border: none;
+                background: transparent;
+                color: rgba(189, 219, 255, 215);
+                text-align: left;
+                padding-left: 12px;
+                font: 600 12px 'Inter';
+            }
+            QPushButton#algoToggleBtn:hover {
+                color: #FFFFFF;
+                padding-left: 11px;
+                background: rgba(10, 132, 255, 40);
+                border-radius: 10px;
+            }
+            QPushButton#algoToggleBtn:pressed {
+                color: #FFFFFF;
+                padding-top: 2px;
+                padding-left: 14px;
+                background: rgba(10, 132, 255, 60);
+                border-radius: 10px;
+            }
+            QPushButton#algoToggleBtn[active="true"] {
+                color: #FFFFFF;
+            }
+            QFrame#clickModeToggle {
+                background: rgba(37, 54, 79, 190);
+                border: 1px solid rgba(98, 132, 182, 170);
+                border-radius: 14px;
+            }
+            QFrame#clickModeThumb {
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                                            stop:0 rgba(98, 184, 255, 255),
+                                            stop:0.52 rgba(43, 145, 242, 252),
+                                            stop:1 rgba(10, 132, 255, 248));
+                border: 1px solid rgba(104, 184, 255, 240);
+                border-radius: 12px;
+            }
+            QPushButton#clickModeBtn {
+                border: none;
+                background: transparent;
+                color: rgba(189, 219, 255, 215);
+                font: 600 12px 'Inter';
+                padding: 0px;
+            }
+            QPushButton#clickModeBtn:hover {
+                color: #FFFFFF;
+                padding-top: 0px;
+                background: rgba(10, 132, 255, 42);
+                border-radius: 10px;
+            }
+            QPushButton#clickModeBtn:pressed {
+                color: #FFFFFF;
+                padding-top: 2px;
+                background: rgba(10, 132, 255, 62);
+                border-radius: 10px;
+            }
+            QPushButton#clickModeBtn[active="true"] {
+                color: #FFFFFF;
             }
             QTextEdit {
                 background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
@@ -974,36 +1196,34 @@ class FutoshikiQtWindow(QMainWindow):
             }
             QPushButton {
                 color: #FFFFFF;
-                border: 1px solid rgba(180,210,255,120);
+                border: 1px solid rgba(104,184,255,220);
                 border-radius: 11px;
                 padding: 8px 12px;
                 background-color: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-                                                  stop:0 rgba(130,204,255,248),
-                                                  stop:0.45 rgba(88,164,238,244),
-                                                  stop:1 rgba(14,84,162,242));
+                                                  stop:0 rgba(94,180,255,255),
+                                                  stop:0.48 rgba(33,143,244,252),
+                                                  stop:1 rgba(10,132,255,248));
             }
             QPushButton:hover {
                 background-color: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-                                                  stop:0 rgba(164,224,255,255),
-                                                  stop:0.45 rgba(113,190,255,255),
-                                                  stop:1 rgba(33,126,226,255));
-                border-color: rgba(225,242,255,220);
+                                                  stop:0 rgba(128,200,255,255),
+                                                  stop:0.48 rgba(57,158,250,255),
+                                                  stop:1 rgba(18,140,255,255));
+                border-color: rgba(136, 202, 255, 245);
             }
             QPushButton:pressed {
-                padding-top: 8px;
-                padding-bottom: 8px;
+                padding-top: 11px;
+                padding-bottom: 5px;
+                border-color: rgba(86, 167, 246, 255);
                 background-color: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-                                                  stop:0 rgba(102,169,230,255),
-                                                  stop:1 rgba(10,70,136,255));
+                                                  stop:0 rgba(55,144,224,255),
+                                                  stop:1 rgba(8,101,196,255));
             }
             """
         )
 
     def selected_algo(self) -> str:
-        btn = self.algo_group.checkedButton()
-        if btn is None:
-            return "astar"
-        return btn.property("algo_key")
+        return self.algo_toggle.selected_key()
 
     def log(self, text: str) -> None:
         self.log_box.append(text)
@@ -1014,6 +1234,27 @@ class FutoshikiQtWindow(QMainWindow):
         self.metric_time.setText(f"{runtime:.4f}s")
         self.metric_nodes.setText(str(nodes))
         self.metric_valid.setText(valid)
+
+    def _trace_interval_from_solution_steps(self, solution_steps: int) -> int:
+        ns = max(1, int(solution_steps))
+        if ns > 10000:
+            # QTimer works in milliseconds; 0 means run again ASAP.
+            return 0
+        if ns == 10000:
+            return 1
+        if ns >= 5000:
+            return 4
+        if ns >= 2000:
+            return 8
+        if ns >= 1000:
+            return 12
+        if ns >= 400:
+            return 20
+        if ns >= 150:
+            return 35
+        if ns >= 60:
+            return 55
+        return 95
 
     def _refresh_status(self) -> None:
         if self.puzzle is None or self.display_grid is None:
@@ -1085,7 +1326,7 @@ class FutoshikiQtWindow(QMainWindow):
             self.board.update()
             return
         self.selected_cell = (i, j)
-        if self.click_mode.currentText() == "selector":
+        if self.click_mode.mode() == "selector":
             menu = QMenu(self)
             for val in range(self.puzzle.n + 1):
                 txt = "—" if val == 0 else str(val)
@@ -1111,15 +1352,12 @@ class FutoshikiQtWindow(QMainWindow):
         default_dir = os.path.normpath(os.path.join(source_dir, "..", "inputs"))
         if not os.path.isdir(default_dir):
             default_dir = source_dir
-        backdrop = ModalBackdrop(self)
-        backdrop.show_animated()
-        dlg = AnimatedFileDialog(self, start_dir=default_dir)
-        result = dlg.exec()
-        backdrop.hide_animated()
-        if result != QFileDialog.Accepted:
-            return
-        files = dlg.selectedFiles()
-        path = files[0] if files else ""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select input file",
+            default_dir,
+            "Text Files (*.txt);;All Files (*)",
+        )
         if not path:
             return
         try:
@@ -1167,28 +1405,46 @@ class FutoshikiQtWindow(QMainWindow):
             if solve_steps == 0:
                 solve_steps = sum(1 for i in range(n) for j in range(n) if self.puzzle.grid[i][j] == 0)
             self._set_metrics(solve_steps, r.runtime_sec, r.nodes_expanded, "✓ YES")
-            steps = len(self.last_trace) if self.last_trace else solve_steps
-            self.auto_interval_ms = 16 if steps > 300 else 40 if steps > 100 else 160
-            self.log(f"✓ Solved — replay {steps} steps @ {self.auto_interval_ms}ms/step")
+            trace_steps = len(self.last_trace) if self.last_trace else solve_steps
+            self.auto_interval_ms = self._trace_interval_from_solution_steps(solve_steps)
+            self.auto_batch_steps = 1
+            if solve_steps > 10000:
+                self.auto_batch_steps = 900
+            elif solve_steps > 5000:
+                self.auto_batch_steps = 300
+            elif solve_steps > 2000:
+                self.auto_batch_steps = 120
+            elif solve_steps > 800:
+                self.auto_batch_steps = 40
+            self.log(
+                f"✓ Solved — replay {trace_steps} trace steps, "
+                f"{solve_steps} solution steps @ {self.auto_interval_ms}ms/step "
+                f"(batch x{self.auto_batch_steps})"
+            )
         self.step_i = 0
         self.step_order = []
         self.board.update()
 
-    def _step_trace(self) -> bool:
+    def _step_trace(self, emit_log: bool = True, refresh_view: bool = True) -> bool:
         if self.puzzle is None:
             return False
         if self.last_trace:
             total = len(self.last_trace)
             if self.step_i == 0:
                 self.display_grid = [row[:] for row in self.puzzle.grid]
-                self._refresh_status()
-                self.log(f"▶ Replay started ({total} trace steps)")
+                if refresh_view:
+                    self._refresh_status()
+                if emit_log:
+                    self.log(f"▶ Replay started ({total} trace steps)")
             if self.step_i >= total:
                 if self.last_grid is not None:
                     self.display_grid = [row[:] for row in self.last_grid]
-                    self._refresh_status()
-                self.log("■ Replay complete")
-                self.board.update()
+                    if refresh_view:
+                        self._refresh_status()
+                if emit_log:
+                    self.log("■ Replay complete")
+                if refresh_view:
+                    self.board.update()
                 return False
             action, i, j, v = self.last_trace[self.step_i]
             k = self.step_i + 1
@@ -1197,25 +1453,27 @@ class FutoshikiQtWindow(QMainWindow):
                     self.display_grid[i][j] = v
                 elif action == "unset" and self.puzzle.grid[i][j] == 0:
                     self.display_grid[i][j] = 0
-            if action == "set":
-                self.log(f"[{k}/{total}] Try ({i + 1},{j + 1}) = {v}")
-            elif action == "propagate":
-                self.log(f"[{k}/{total}] Propagate ({i + 1},{j + 1}) = {v}")
-            elif action == "commit":
-                self.log(f"[{k}/{total}] Commit ({i + 1},{j + 1}) = {v}")
-            elif action == "unset":
-                self.log(f"[{k}/{total}] Backtrack ({i + 1},{j + 1})")
-            elif action == "reject":
-                self.log(f"[{k}/{total}] Reject ({i + 1},{j + 1}) = {v}")
-            else:
-                self.log(f"[{k}/{total}] {action} ({i + 1},{j + 1}) = {v}")
+            if emit_log:
+                if action == "set":
+                    self.log(f"[{k}/{total}] Try ({i + 1},{j + 1}) = {v}")
+                elif action == "propagate":
+                    self.log(f"[{k}/{total}] Propagate ({i + 1},{j + 1}) = {v}")
+                elif action == "commit":
+                    self.log(f"[{k}/{total}] Commit ({i + 1},{j + 1}) = {v}")
+                elif action == "unset":
+                    self.log(f"[{k}/{total}] Backtrack ({i + 1},{j + 1})")
+                elif action == "reject":
+                    self.log(f"[{k}/{total}] Reject ({i + 1},{j + 1}) = {v}")
+                else:
+                    self.log(f"[{k}/{total}] {action} ({i + 1},{j + 1}) = {v}")
             self.step_i += 1
-            self._refresh_status()
-            self.board.update()
+            if refresh_view:
+                self._refresh_status()
+                self.board.update()
             return True
-        return self._step_final_reveal()
+        return self._step_final_reveal(emit_log=emit_log, refresh_view=refresh_view)
 
-    def _step_final_reveal(self) -> bool:
+    def _step_final_reveal(self, emit_log: bool = True, refresh_view: bool = True) -> bool:
         if self.puzzle is None or self.last_grid is None:
             return False
         if not self.step_order:
@@ -1223,25 +1481,51 @@ class FutoshikiQtWindow(QMainWindow):
             self.step_order = [(i, j) for i in range(n) for j in range(n) if self.puzzle.grid[i][j] == 0]
             self.step_i = 0
             self.display_grid = [row[:] for row in self.puzzle.grid]
-            self._refresh_status()
-            self.log(f"▶ Replay started ({len(self.step_order)} reveal steps)")
+            if refresh_view:
+                self._refresh_status()
+            if emit_log:
+                self.log(f"▶ Replay started ({len(self.step_order)} reveal steps)")
         if self.step_i >= len(self.step_order):
-            self.log("■ Replay complete")
-            self.board.update()
+            if emit_log:
+                self.log("■ Replay complete")
+            if refresh_view:
+                self.board.update()
             return False
         i, j = self.step_order[self.step_i]
         if self.display_grid is not None:
             self.display_grid[i][j] = self.last_grid[i][j]
-        self.log(f"[{self.step_i + 1}/{len(self.step_order)}] Reveal ({i + 1},{j + 1}) = {self.last_grid[i][j]}")
+        if emit_log:
+            self.log(f"[{self.step_i + 1}/{len(self.step_order)}] Reveal ({i + 1},{j + 1}) = {self.last_grid[i][j]}")
         self.step_i += 1
-        self._refresh_status()
-        self.board.update()
+        if refresh_view:
+            self._refresh_status()
+            self.board.update()
         return True
 
     def _auto_tick(self) -> None:
         if not self.auto_play:
             return
-        if not self._step_trace():
+        if self.last_trace:
+            remaining = max(0, len(self.last_trace) - self.step_i)
+        elif self.step_order:
+            remaining = max(0, len(self.step_order) - self.step_i)
+        elif self.puzzle is not None:
+            n = self.puzzle.n
+            remaining = sum(1 for i in range(n) for j in range(n) if self.puzzle.grid[i][j] == 0)
+        else:
+            remaining = 0
+
+        cap_by_remaining = max(1, remaining // 24) if remaining > 0 else 1
+        steps_per_tick = max(1, min(self.auto_batch_steps, cap_by_remaining))
+        allow_verbose = steps_per_tick <= 2
+        still_running = True
+        for _ in range(steps_per_tick):
+            still_running = self._step_trace(emit_log=allow_verbose, refresh_view=False)
+            if not still_running:
+                break
+        self._refresh_status()
+        self.board.update()
+        if not still_running:
             self._stop_auto()
 
     def _stop_auto(self) -> None:
