@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
 Cell = Tuple[int, int]
+TraceEvent = Tuple[str, int, int, int]  # action, row, col, value
 
 
 @dataclass
@@ -24,6 +25,8 @@ class SolveResult:
     contradiction: bool = False
     # Optional diagnostics for GUI / demos (backward compatible defaults).
     messages: List[str] = field(default_factory=list)
+    # Optional per-step search trace for GUI replay.
+    trace: List[TraceEvent] = field(default_factory=list)
 
 
 def parse_csv_line(line: str) -> List[int]:

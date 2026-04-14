@@ -1,6 +1,3 @@
-# Python 3.7+ — core solvers use the standard library only.
-# Optional GUIs:
-#   - source/gui.py: tkinter only (bundled with CPython; on Linux: python3-tk).
-#   - source/gui_pygame.py: pygame (pip) + tkinter for file dialogs only (python3-tk on Linux).
-
-pygame>=2.5,<3
+# Core solver logic uses Python stdlib only.
+# Main GUI: PySide6 (Qt).
+PySide6
