@@ -1,1 +1,7 @@
+<<<<<<< HEAD
 PySide6
+=======
+# Core solver logic uses Python stdlib only.
+# Main GUI: PySide6 (Qt).
+PySide6
+>>>>>>> main

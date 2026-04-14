@@ -6,8 +6,9 @@ from typing import Dict, List, Optional, Tuple
 
 import math
 import os
+import time
 
-from PySide6.QtCore import QTimer, Qt, QRectF, QPointF, QVariantAnimation, QEasingCurve, QRect, QPropertyAnimation, QParallelAnimationGroup
+from PySide6.QtCore import QTimer, Qt, QRectF, QPointF, QPoint, QVariantAnimation, QEasingCurve, QRect, QPropertyAnimation, QParallelAnimationGroup
 from PySide6.QtGui import (
     QAction,
     QColor,
@@ -34,8 +35,8 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QWidget,
-    QStyleOptionButton,
     QStyle,
+    QStyleOptionButton,
 )
 
 from futoshiki_core import Puzzle, inequality_ok, is_valid_solution, read_input, write_output
@@ -178,8 +179,8 @@ class LiquidButton(QPushButton):
     def _apply_press_value(self, v: float) -> None:
         self._press_value = float(v)
         # Stronger "pressed down" depth, closer to board-cell click feel.
-        self._shadow.setOffset(0, 6 + 2.4 * self._anim_value - 3.8 * self._press_value)
-        self._shadow.setBlurRadius(18.0 + 13.0 * self._anim_value - 8.0 * self._press_value)
+        self._shadow.setOffset(0, 6 + 1.2 * self._anim_value - 3.8 * self._press_value)
+        self._shadow.setBlurRadius(18.0 + 6.0 * self._anim_value - 8.0 * self._press_value)
         self.update()
 
     def _tick_fx(self) -> None:
@@ -207,7 +208,6 @@ class LiquidButton(QPushButton):
         p.scale(scale_x, scale_y)
         p.translate(-cx, -cy)
         self.style().drawControl(QStyle.CE_PushButton, option, p, self)
-
         rr = 11.0
         clip = QPainterPath()
         clip.addRoundedRect(QRectF(1.0, 1.0, self.width() - 2.0, self.height() - 2.0), rr, rr)
@@ -246,7 +246,6 @@ class LiquidButton(QPushButton):
             p.setBrush(rg)
             p.drawEllipse(QPointF(rp.x, rp.y), rad, rad)
 
-        # Press depth: add subtle inner darkening while button is pressed.
         if self._press_value > 0.001:
             press_alpha = int(86 * self._press_value)
             p.fillRect(self.rect(), QColor(6, 16, 28, press_alpha))
@@ -295,9 +294,7 @@ class ClickModeToggle(QFrame):
         old_mode = self._mode
         self._mode = mode
         self._apply_button_state()
-        if self.width() < 40:
-            return
-        if mode == old_mode:
+        if self.width() < 40 or mode == old_mode:
             return
         self._layout_children(animate)
 
@@ -311,7 +308,7 @@ class ClickModeToggle(QFrame):
         thumb_w = half - 2
         thumb_h = h - 2
         target_x = pad + 1 if self._mode == "cycle" else pad + half + 1
-        target_pos = QPointF(target_x, pad + 1).toPoint()
+        target_pos = QPoint(target_x, pad + 1)
         self._thumb.resize(thumb_w, thumb_h)
         self._thumb.raise_()
         self.btn_cycle.raise_()
@@ -389,7 +386,7 @@ class AlgoVerticalToggle(QFrame):
                 sel_idx = idx
                 break
         target_y = pad + sel_idx * slot_h + 1
-        target_pos = QPointF(pad + 1, target_y).toPoint()
+        target_pos = QPoint(pad + 1, target_y)
         self._thumb.resize(w - 2, slot_h - 2)
         self._thumb.raise_()
         for btn in self._buttons:
@@ -666,6 +663,7 @@ class BoardWidget(QWidget):
         self._press_anim.setEasingCurve(QEasingCurve.OutCubic)
         self._press_anim.valueChanged.connect(self._on_press_scale)
         self._phase = 0.0
+        self._last_tick = time.perf_counter()
         self._ripples: List[CellRipple] = []
         self._anim_timer = QTimer(self)
         self._anim_timer.timeout.connect(self._tick_anim)
@@ -673,15 +671,19 @@ class BoardWidget(QWidget):
         self.setMinimumSize(360, 360)
 
     def _tick_anim(self) -> None:
-        self._phase = (self._phase + 0.022) % (2.0 * math.pi)
+        now = time.perf_counter()
+        dt = max(0.0, min(0.05, now - self._last_tick))
+        self._last_tick = now
+        # Time-based phase progression avoids visible cadence reset.
+        self._phase += dt * 1.55
         keep: List[CellRipple] = []
         for rp in self._ripples:
-            rp.age += 0.016
+            rp.age += dt
             if rp.age < rp.duration:
                 keep.append(rp)
         self._ripples = keep
-        if self._hover_cell is not None or self._ripples:
-            self.update()
+        # Crystal shimmer now runs continuously for all cells.
+        self.update()
 
     def _calc_layout(self, n: int) -> BoardLayout:
         w = max(40, self.width())
@@ -806,15 +808,16 @@ class BoardWidget(QWidget):
         ref.setColorAt(1.0, QColor(255, 255, 255, 0))
         p.fillRect(r, ref)
 
-        # Hover shimmer (crystal balanced)
-        if self._hover_cell == (row, col):
-            sweep = (math.sin(self._phase * 1.8) + 1.0) * 0.5
-            x0 = r.left() - r.width() * 0.4 + sweep * r.width() * 1.4
-            shimmer = QLinearGradient(x0, r.top(), x0 + r.width() * 0.42, r.bottom())
-            shimmer.setColorAt(0.0, QColor(255, 255, 255, 0))
-            shimmer.setColorAt(0.5, QColor(255, 255, 255, 58))
-            shimmer.setColorAt(1.0, QColor(255, 255, 255, 0))
-            p.fillRect(r, shimmer)
+        # Continuous crystal shimmer (hover no longer controls shimmer; only scale).
+        phase_offset = (row * 0.73 + col * 0.41)
+        sweep = (math.sin(self._phase * 1.55 + phase_offset) + 1.0) * 0.5
+        x0 = r.left() - r.width() * 0.42 + sweep * r.width() * 1.45
+        shimmer = QLinearGradient(x0, r.top(), x0 + r.width() * 0.42, r.bottom())
+        shimmer_alpha = 30 if state != "conflict" else 20
+        shimmer.setColorAt(0.0, QColor(255, 255, 255, 0))
+        shimmer.setColorAt(0.5, QColor(255, 255, 255, shimmer_alpha))
+        shimmer.setColorAt(1.0, QColor(255, 255, 255, 0))
+        p.fillRect(r, shimmer)
 
         # Click ripple
         for rp in self._ripples:
@@ -1235,14 +1238,23 @@ class FutoshikiQtWindow(QMainWindow):
     def _trace_interval_from_solution_steps(self, solution_steps: int) -> int:
         ns = max(1, int(solution_steps))
         if ns > 10000:
+            # QTimer works in milliseconds; 0 means run again ASAP.
+            return 0
+        if ns == 10000:
             return 1
+        if ns >= 5000:
+            return 4
+        if ns >= 2000:
+            return 8
         if ns >= 1000:
-            return 10
+            return 12
         if ns >= 400:
             return 20
         if ns >= 150:
             return 35
-        return 50
+        if ns >= 60:
+            return 55
+        return 95
 
     def _refresh_status(self) -> None:
         if self.puzzle is None or self.display_grid is None:
@@ -1493,7 +1505,6 @@ class FutoshikiQtWindow(QMainWindow):
     def _auto_tick(self) -> None:
         if not self.auto_play:
             return
-
         if self.last_trace:
             remaining = max(0, len(self.last_trace) - self.step_i)
         elif self.step_order:
@@ -1504,8 +1515,6 @@ class FutoshikiQtWindow(QMainWindow):
         else:
             remaining = 0
 
-        # Dynamic deceleration near the end: keep fast throughput early,
-        # then reduce batch size so the final part remains visible.
         cap_by_remaining = max(1, remaining // 24) if remaining > 0 else 1
         steps_per_tick = max(1, min(self.auto_batch_steps, cap_by_remaining))
         allow_verbose = steps_per_tick <= 2
