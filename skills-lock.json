@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "framer-motion": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "35a01c664f7e3e64084702b1b4b880fc913a824c6870df804d8d12c8835eb7e3"
+    },
+    "high-end-visual-design": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "computedHash": "f730e4132775f13eea19e3dc39afc6bb453cfc0498872b127ad8f0d47cfd802d"
+    },
+    "ui-design": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "8173d97b7dc2d5c66df7211a9ae1f7c9ddd1dfe66304c2178493c5fc8f141c49"
+    }
+  }
+}
