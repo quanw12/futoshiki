@@ -2,9 +2,11 @@
 
 % ========================= PACKAGES =========================
 \usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnam]{babel}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
+\usepackage{adjustbox}
 \usepackage{geometry}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
@@ -13,7 +15,7 @@
 \usepackage{enumitem}
 \usepackage{tabularx}
 \usepackage{booktabs}
-\usepackage{longtable}
+\usepackage{adjustbox}  % Thêm dòng này vào đầu file (preamble)
 \usepackage{caption}
 \usepackage{float}
 \usepackage{tcolorbox}
@@ -22,8 +24,12 @@
 \usepackage{multirow}
 \usepackage{lastpage}
 \usepackage{listings}
-\usepackage{mathtools}
-\usetikzlibrary{positioning, arrows.meta, matrix}
+\usetikzlibrary{shapes}
+\usepackage{algorithm}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{algpseudocode}   % or algorithmicx / algorithmic
+\usetikzlibrary{positioning, arrows.meta}
 
 % ========================= PAGE SETUP =========================
 \geometry{
@@ -45,24 +51,31 @@
 \definecolor{headerBlue}{RGB}{0,51,102}
 \definecolor{lightGray}{RGB}{240,240,240}
 
+\definecolor{neutral}{RGB}{255,255,255}
+\definecolor{visited}{RGB}{144, 238, 144}   % Xanh lá cây nhạt (light green) - đã thăm
+\definecolor{current}{RGB}{255, 80, 80}     % Đỏ - đang thăm
+\definecolor{inqueue}{RGB}{135, 206, 235}   % Xanh dương nhạt - đang trong Queue
+
 % ========================= CODE STYLE =========================
 \lstdefinestyle{pseudostyle}{
     backgroundcolor=\color{codeBackground},
-    basicstyle=\ttfamily\footnotesize\color{black},
+    basicstyle=\ttfamily\footnotesize,
     keywordstyle=\color{codeKeyword}\bfseries,
     commentstyle=\color{codeComment}\itshape,
+    stringstyle=\color{codeString},
+    numberstyle=\tiny\color{codeNumber},
     breaklines=true,
     frame=single,
     rulecolor=\color{codeBorder},
     numbers=left,
-    numberstyle=\tiny\color{gray},
-    tabsize=2,
+    numbersep=8pt,
+    tabsize=4,
     showstringspaces=false,
     captionpos=b,
     xleftmargin=1.5em,
     framexleftmargin=1em,
-    aboveskip=0.8em,
-    belowskip=0.8em,
+    aboveskip=1em,
+    belowskip=1em,
 }
 
 \lstdefinestyle{shellstyle}{
@@ -112,28 +125,13 @@
     bottom=6pt,
 }
 
-\newtcolorbox{axiombox}[1][]{
-    colback=green!4,
-    colframe=green!50!black,
-    fonttitle=\bfseries,
-    title={#1},
-    breakable,
-    sharp corners,
-    boxrule=0.8pt,
-    left=8pt,
-    right=8pt,
-    top=6pt,
-    bottom=6pt,
-}
-
 % ========================= HEADER/FOOTER =========================
 \setlength{\headheight}{30pt}
 \addtolength{\topmargin}{-18pt}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\includegraphics[width=1cm]{logo-hcmus-new.png}\hspace{0.1cm}\raisebox{0.05cm}{\small University of Science -- VNU-HCM}}
-\fancyhead[R]{\small CSC14003 -- Introduction to Artificial Intelligence}
-\fancyfoot[C]{\thepage\ / \pageref{LastPage}}
+\fancyhead[L]{\small \textit{Project 2 - Futoshiki Puzzles}}
+\fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0.4pt}
 
@@ -196,153 +194,268 @@
     \end{tikzpicture}
 
     \begin{center} 
-        {\LARGE\bfseries\color{accentBlue} Vietnam National University -- Ho Chi Minh City \par}
-        \vspace{0.2cm}
-        {\Large\bfseries\color{accentBlue} University of Science \par}
-        \vspace{0.2cm}
+        {\LARGE\bfseries\color{accentBlue} University of Science - VNU-HCM \par}
+        \vspace{0.3cm}
         {\large Faculty of Information Technology \par}
-        \vspace{0.8cm}
+        \vspace{1cm}
         
-        \includegraphics[width=3.2in, height=3in]{logo-hcmus-new.png}
-        \vspace{0.8cm}
+        \includegraphics[width=3.5in, height=3in]{asset/logo-hcmus-new.png}
+        \vspace{1cm}
         
+        \vspace{0.5cm}
         \hrule height 1pt
         \vspace{0.1cm}
         \hrule height 0.5pt
         \vspace{0.5cm}
         
-        {\Huge\bfseries\color{accentBlue} INTRODUCTION TO \\ ARTIFICIAL INTELLIGENCE \par}
-        \vspace{0.4cm}
-        {\large\color{gray} CSC14003 \par}
-        \vspace{0.4cm}
-
-        {\Large\bfseries Project 2 -- Logic: Futoshiki Puzzle Solver\par}
+        {\Huge\bfseries\color{accentBlue} INTRODUCTION TO ARTIFICIAL INTELLIGENCE  \par}
+        \vspace{0.5cm}
+        
+        {\Large Project 2 - Futoshiki Puzzles\par}
         \vspace{0.5cm}
         
         \hrule height 0.5pt
         \vspace{0.1cm}
         \hrule height 1pt
-        \vspace{1.2cm}
+        \vspace{1cm}
 
-        \vfill
-        {\large HO CHI MINH CITY -- 2026}
+        \vspace{5cm}
+        {HO CHI MINH CITY -- 2026}
     \end{center}
 \end{titlepage}
 
 % ========================= COVER PAGE 2 =========================
 \begin{titlepage}
     \begin{center}
-        {\LARGE\bfseries\color{accentBlue} Vietnam National University -- Ho Chi Minh City \par}
-        \vspace{0.3cm}
-        {\Large\bfseries\color{accentBlue} University of Science \par}
-        \vspace{0.3cm}
+        {\LARGE\bfseries\color{accentBlue} University of Science - VNU-HCM \par}
+        \vspace{0.5cm}
         {\large Faculty of Information Technology \par}
-        \vspace{1.2cm}
-
-        \includegraphics[width=3.2in, height=3in]{logo-hcmus-new.png}
-        \vspace{1.2cm}
-
-        \hrule height 1pt
-        \vspace{0.1cm}
-        \hrule height 0.5pt
-        \vspace{0.5cm}
-
-        {\Huge\bfseries\color{accentBlue} FUTOSHIKI PUZZLE SOLVER \par}
-        \vspace{0.3cm}
-        {\large\itshape First-Order Logic Inference Engine\par}
-        \vspace{0.5cm}
-
-        \hrule height 0.5pt
-        \vspace{0.1cm}
-        \hrule height 1pt
         \vspace{1.5cm}
 
-        \begin{tabular}{ll}
-            \textbf{Subject:}   & CSC14003 -- Introduction to Artificial Intelligence \\[6pt]
-            \textbf{Lecturer:}  & \rule{7cm}{0.4pt} \\[6pt]
-            \textbf{Student 1:} & Name \hspace{0.5cm} -- \hspace{0.3cm} Student ID \\[4pt]
-            \textbf{Student 2:} & Name \hspace{0.5cm} -- \hspace{0.3cm} Student ID \\[4pt]
-            \textbf{Student 3:} & Name \hspace{0.5cm} -- \hspace{0.3cm} Student ID \\[6pt]
-            \textbf{Class:}     & \rule{7cm}{0.4pt} \\[6pt]
-            \textbf{Group:}     & \rule{7cm}{0.4pt} \\
+        \includegraphics[width=3.5in, height=3in]{asset/logo-hcmus-new.png}
+        \vspace{1.5cm}
+
+        \hrule height 1pt
+        \vspace{0.1cm}
+        \hrule height 0.5pt
+        \vspace{0.5cm}
+
+        {\Huge\bfseries\color{accentBlue} INTRODUCTION TO ARTIFICIAL INTELLIGENCE \par}
+        \vspace{0.5cm}
+
+        {\Large Project 2 - Futoshiki Puzzles\par}
+        \vspace{0.5cm}
+
+        \hrule height 1pt
+        \vspace{0.1cm}
+        \hrule height 0.5pt
+        \vspace{0.5cm}
+
+        {\textbf{SUPERVISOR}} \\[0.5cm]
+        {MS. Nguyen Thanh Tinh} \\
+        \vspace{1.0cm}
+
+        \begin{tabular}{|c|l|c|}
+            \hline
+            \textbf{No.} & \textbf{Full Name} & \textbf{Student ID} \\
+            \hline
+            1 & Lê Phúc Khang & 24127180 \\
+            \hline
+            2 & Dương Anh Kiệt & 24127432 \\
+            \hline
+            3 & Nguyễn Kiều Anh Quân & 24127512 \\
+            \hline
+            4 & Nguyễn Dương Gia Thuận & 24127551 \\
+            \hline
         \end{tabular}
 
+        \vspace{0.1cm}
         \vfill
-        {\large Ho Chi Minh City, \today}
+        HO CHI MINH CITY -- 2026
     \end{center}
 \end{titlepage}
 
-% ========================= TABLE OF CONTENTS =========================
 \tableofcontents
 \newpage
 
-% ================================================================
-%            SECTION 1: PROJECT PLANNING & TASK DISTRIBUTION
-% ================================================================
-\section{Project Planning and Task Distribution}
+% ========================= TABLE OF CONTENTS =========================
+\section*{Acknowledgements}
+\addcontentsline{toc}{section}{Acknowledgements}
 
-\subsection{Team Members and Responsibilities}
+We would like to express our sincere gratitude to our teaching assistant, \textbf{Mr. Nguyen Thanh Tinh}, for his invaluable guidance, continuous support, and constructive feedback throughout the course. His dedication and expertise greatly contributed to the successful completion of this project.
+
+We are also deeply thankful to our instructor, \textbf{Ms. Nguyen Ngoc Thao}, for her insightful lectures, encouragement, and patience. Her profound knowledge in Artificial Intelligence inspired us to explore and overcome the challenges of implementing the Futoshiki Puzzles Solver.
+
+This project would not have been possible without their collective efforts and commitment to our learning journey.
+\newpage
+
+% ================================================================
+%            SECTION 1: INTRODUCTION
+% ================================================================
+\section{Introduction}
+
+\subsection{Problem Introduction}
+This project solves the \textbf{Futoshiki} puzzle as a logic/CSP problem.  
+Given an $N \times N$ grid with:
+\begin{itemize}
+    \item fixed clues (pre-filled cells),
+    \item row/column all-different constraints,
+    \item inequality constraints between adjacent cells,
+\end{itemize}
+the solver must produce a complete valid assignment over values $1..N$.
+
+\subsection{Game Rules}
+\begin{itemize}
+    \item Each row contains each value from $1$ to $N$ exactly once.
+    \item Each column contains each value from $1$ to $N$ exactly once.
+    \item Every inequality sign must be satisfied.
+    \item Given clues are immutable.
+\end{itemize}
+
+\subsection{Objectives}
+\begin{itemize}
+    \item Formalize the puzzle in first-order logic and grounded constraints.
+    \item Implement and compare 5 solvers: forward, backward (SLD style), A*, backtracking, brute-force.
+    \item Provide a \textbf{PySide6 GUI} that supports loading inputs, solving, replay trace, and saving output.
+    \item Evaluate behavior on the provided 10 benchmark inputs.
+\end{itemize}
+% ================================================================
+%            SECTION 2: VIDEO PRESENTATION
+% ================================================================
+\section{Video Presentation}
+
+Below is the video link demonstrating the gameplay of our Futoshiki Puzzles Solver.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth]{asset/video.png}
+    \caption{Futoshiki Puzzles Gameplay}
+    \label{fig:video}
+\end{figure}
+
+\textbf{Link video:} \url{https://www.youtube.com/watch?v=kcPOfJCJ7h0}
+\newpage
+
+% ================================================================
+%            SECTION 3: TASK DISTRIBUTION & PROJECT PLAN
+% ================================================================
+\section{Task Distribution and Project Plan}
+
+\subsection{Task Assignment}
 
 \begin{table}[H]
 \centering
-\renewcommand{\arraystretch}{1.4}
-\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}m{2.5cm}|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}m{2.2cm}|>{\centering\arraybackslash}m{1.8cm}|}
+\adjustbox{max width=\textwidth}{%
+\small
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|c|p{3.25cm}|p{7.0cm}|c|}
 \hline
-\textbf{Member} & \textbf{Assigned Tasks} & \textbf{Completion} & \textbf{Score} \\
+\textbf{No.} & \textbf{Full Name} & \textbf{Tasks} & \textbf{Completion} \\
 \hline
-Student 1 \newline (ID: \ldots) &
-  FOL formalization report; KB generation; forward chaining implementation &
-  100\% & $9.0 \times 1.0$ \\
+1 & Lê Phúc Khang (24127180) 
+    & \begin{tabular}{@{}l@{}}
+        - FOL formalization + CNF derivation \\
+        - A* implementation + heuristic \\
+        - Heuristic proof in report
+      \end{tabular} 
+    & 100\% \\
 \hline
-Student 2 \newline (ID: \ldots) &
-  Backward chaining (SLD resolution); A* search; heuristic design &
-  100\% & $9.0 \times 1.0$ \\
+2 & Dương Anh Kiệt (24127432) 
+    & \begin{tabular}{@{}l@{}}
+        - Ground KB/CNF generator \\
+        - Forward chaining implementation \\
+        - Input set + benchmark logs
+      \end{tabular} 
+    & 100\% \\
 \hline
-Student 3 \newline (ID: \ldots) &
-  Brute-force \& backtracking; experiment analysis; report writing &
-  100\% & $9.0 \times 1.0$ \\
+3 & Nguyễn Kiều Anh Quân (24127512) 
+    & \begin{tabular}{@{}l@{}}
+        - Backward chaining (SLD) \\
+        - Backtracking + brute-force baselines \\
+        - Correctness check + comparison write-up
+      \end{tabular} 
+    & 100\% \\
 \hline
-\end{tabularx}
-\caption{Task distribution and completion percentages.}
+4 & Nguyễn Dương Gia Thuận (24127551) 
+    & \begin{tabular}{@{}l@{}}
+        - PySide6 GUI integration \\
+        - Replay + file I/O bridge \\
+        - System test + demo + packaging
+      \end{tabular} 
+    & 100\% \\
+\hline
+\multicolumn{3}{|c|}{\textbf{Total Completion}} & \textbf{100\%} \\
+\hline
+\end{tabular}
+}
+\caption{Task assignment aligned with Project 2 (Futoshiki) requirements}
 \end{table}
 
-\begin{notebox}[Score formula]
-If the group score is $G$ and a member's completion percentage is $p$, then the member's individual score is $G \times p$. All members are evaluated fairly based on actual contribution.
-\end{notebox}
-
-\subsection{Self-Evaluation Against Project Criteria}
+\subsection{Project Timeline}
 
 \begin{table}[H]
 \centering
+\small
 \renewcommand{\arraystretch}{1.3}
-\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}m{1.5cm}|>{\centering\arraybackslash}m{2cm}|}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{|c|p{2.8cm}|p{7.0cm}|}
 \hline
-\textbf{No.} & \textbf{Criterion} & \textbf{Max} & \textbf{Self-eval} \\
+\textbf{Phase} & \textbf{Date} & \textbf{Work} \\
 \hline
-1 & FOL formalization (report) & 25\% & \ldots\% \\
+1 & 06/04 -- 08/04 & Analyze assignment rubric; finalize FOL vocabulary and full axiom list (including missing axioms). \\
 \hline
-2 & Automatic KB generation & 10\% & \ldots\% \\
+2 & 09/04 -- 12/04 & Implement automatic KB grounding/CNF generation and forward chaining core; verify with small 4x4, 5x5 inputs. \\
 \hline
-3 & Forward chaining & 15\% & \ldots\% \\
+3 & 13/04 -- 16/04 & Implement backward chaining (SLD), brute-force, and backtracking baselines; cross-check solver correctness. \\
 \hline
-4 & Backward chaining (SLD resolution) & 10\% & \ldots\% \\
+4 & 17/04 -- 20/04 & Implement A* with admissible heuristic; optimize propagation (AC-3/MRV) and compare node expansion behavior. \\
 \hline
-5 & A* search with admissible heuristic & 10\% & \ldots\% \\
+5 & 21/04 -- 23/04 & Integrate full PySide6 GUI pipeline (load, solve, replay, save), run system testing on all 10 official inputs. \\
 \hline
-6 & Brute-force and backtracking & 5\% & \ldots\% \\
+6 & 24/04 -- 25/04 & Run final experiments, generate tables/charts, complete comparative analysis and self-evaluation section. \\
 \hline
-7 & Report and experiments & 25\% & \ldots\% \\
+7 & 26/04 & Final review, record demo videos, package source + report + outputs for submission. \\
 \hline
-8 & GUI (bonus) & +10\% & \ldots\% \\
-\hline
-\end{tabularx}
-\caption{Self-evaluation table.}
+\end{tabular}
+\caption{Project timeline from 06/04 to 26/04}
 \end{table}
 
 % ================================================================
-%            SECTION 2: FOL FORMALIZATION
+%            SECTION 4: INFERENCE PROBLEM FORMULATION
 % ================================================================
-\section{FOL Formalization}
+\section{Inference Problem Formulation}
+
+\subsection{State Space}
+One state is a partial assignment of cells to values in $1..N$, together with current feasible domains after constraint propagation.
+
+\subsection{Initial State}
+The initial state is built from:
+\begin{itemize}
+    \item given clues in the input file,
+    \item full candidate domains for empty cells,
+    \item immediate pruning by AC-3.
+\end{itemize}
+
+\subsection{Actions}
+An action assigns a value to one unresolved cell (typically selected by MRV for informed methods), then runs propagation.
+
+\subsection{Transition Model}
+After assigning $(i,j)=v$, the solver updates row/column uniqueness and inequality constraints.  
+States violating constraints are rejected.
+
+\subsection{Goal State}
+A state is goal if:
+\begin{itemize}
+    \item all cells are assigned,
+    \item all row/column uniqueness constraints hold,
+    \item all inequalities hold,
+    \item all clues remain unchanged.
+\end{itemize}
+
+\subsection{Cost Model}
+For search-based solvers, one branch assignment contributes unit step cost.  
+Runtime, expanded nodes, and memory estimate are used for practical comparison.
 
 \subsection{Vocabulary}
 
@@ -497,7 +610,7 @@ Val\bigl(i,\; j,\; f(i,j)\bigr)
 This clause forbids assigning $v_1$ to cell $(i,j)$ and $v_2$ to cell $(i,j+1)$ when a ``$<$'' constraint exists and $v_1 \geq v_2$.
 
 % ================================================================
-%            SECTION 3: ALGORITHMS
+%            SECTION 5: ALGORITHMS
 % ================================================================
 \section{Inference Algorithms}
 
@@ -506,7 +619,7 @@ This clause forbids assigning $v_1$ to cell $(i,j)$ and $v_2$ to cell $(i,j+1)$ 
 Given size $N$, the algorithm instantiates all FOL axioms over the concrete domain $\{1,\ldots,N\}$.
 
 \begin{notebox}[Overview]
-For each axiom schema, substitute all valid combinations of indices $(i, j, v)$ from $\{1,\ldots,N\}$ to produce a fully grounded propositional knowledge base (KB) in CNF. The KB is then fed to a SAT/resolution engine for verification.
+For each axiom schema, substitute all valid combinations of indices $(i, j, v)$ from $\{1,\ldots,N\}$ to produce a fully grounded propositional knowledge base (KB) in CNF. In this project, the grounded clauses are generated and can be checked against a solved assignment via the internal CNF verifier utility.
 \end{notebox}
 
 \begin{lstlisting}[style=pseudostyle, caption={Automatic KB Generation}]
@@ -537,7 +650,10 @@ GENERATE_KB(N):
 
 \subsection{Forward Chaining}
 
-\textbf{Idea:} Starting from known facts (\textit{Given}, \textit{LessH}, \textit{GreaterH}, etc.), repeatedly apply Modus Ponens to derive new $Val(i,j,v)$ atoms until a fixed-point is reached or a contradiction is detected. Combined with AC-3 style constraint propagation to prune domains.
+\textbf{Implementation in this project:} domain-propagation based forward reasoning.
+The solver initializes domains, runs AC-3 propagation, performs singleton elimination
+(row/column all-different propagation), and repeats until fixed point.
+If unresolved cells remain, it falls back to backtracking+AC-3 completion.
 
 \begin{lstlisting}[style=pseudostyle, caption={Forward Chaining Algorithm}]
 FORWARD_CHAINING(puzzle):
@@ -582,7 +698,9 @@ FORWARD_CHAINING(puzzle):
 
 \subsection{Backward Chaining (SLD Resolution)}
 
-\textbf{Idea:} Implement a Prolog-like query engine. Given a goal $Val(i,j,?)$, the interpreter reduces it to sub-goals using Horn clause rules encoding Futoshiki constraints, applying depth-first SLD resolution.
+\textbf{Implementation in this project:} DFS-style SLD-like backward search over ordered goals
+($Val(i,j)$ by cell order). For each unassigned cell, candidate values are filtered by current
+row/column/inequality constraints, then recursively expanded.
 
 \begin{lstlisting}[style=pseudostyle, caption={Backward Chaining (SLD Resolution)}]
 BACKWARD_CHAIN(goal Val(i,j,?), assignment):
@@ -614,11 +732,12 @@ BACKWARD_CHAIN(goal Val(i,j,?), assignment):
 
 \subsection{A* Search}
 
-\textbf{State:} A partial assignment of values to cells, together with the current domains after constraint propagation.
+\textbf{State:} a partial assignment plus domains obtained from AC-3 propagation.
 
-\textbf{Transition cost:} Assigning one cell increases $g$ by 1 (uniform step cost).
+\textbf{Transition cost:} each explicit branch assignment increases $g$ by 1.
 
-\textbf{Heuristic:} $h(s) = $ number of unassigned cells after running AC-3 on the current state. See Section~\ref{sec:heuristic} for admissibility proof.
+\textbf{Heuristic in current implementation:} $h(s)=0$.  
+This keeps A* admissible and consistent, effectively behaving as uniform-cost search over branch decisions, with tie-breakers on domain uncertainty.
 
 \begin{lstlisting}[style=pseudostyle, caption={A* Search Algorithm}]
 A_STAR(puzzle):
@@ -631,11 +750,7 @@ A_STAR(puzzle):
     state = open.pop_min_f()
     if state is COMPLETE_ASSIGNMENT:
       return state.assignment
-    if state in closed:
-      continue
-    closed.add(state)
-
-    # Pick cell using MRV heuristic (min remaining values)
+    # Branch on one unresolved cell
     cell = argmin over unassigned cells of |domain[cell]|
 
     for each v in domain[cell]:
@@ -643,7 +758,7 @@ A_STAR(puzzle):
       new_state.domains = AC3_PROPAGATE(new_state)
       if not CONTRADICTION(new_state):
         g = state.g + 1
-        h = count_unassigned(new_state)  # admissible h
+        h = 0  # admissible and consistent
         open.push(new_state, f = g + h)
 
   return NO_SOLUTION
@@ -652,13 +767,15 @@ A_STAR(puzzle):
 \subsection{Heuristic Admissibility Proof}
 \label{sec:heuristic}
 
-\begin{notebox}[Theorem: $h(s) = |U(s)|$ is admissible]
-Let $U(s)$ be the set of unassigned cells in state $s$ after AC-3 propagation. Each action assigns exactly one cell, so the true remaining cost satisfies:
-\[h^*(s) \geq |U(s)| = h(s)\]
-Since $h(s)$ never overestimates $h^*(s)$, it is \textbf{admissible} and A* is guaranteed to find the optimal (minimal-step) solution.
+\begin{notebox}[Theorem: $h(s)=0$ is admissible]
+For every state $s$, true remaining cost $h^*(s) \ge 0 = h(s)$.  
+Therefore $h$ never overestimates and is admissible.  
+Because $h$ is constant, it is also consistent, so A* remains optimal under this cost model.
 \end{notebox}
 
-\noindent\textbf{Stronger heuristic (optional):} Count cells whose domain is reduced to size 1 after AC-3 but whose singleton value conflicts with a peer. Any such state incurs at least one additional backtrack, so $h(s)$ can be augmented by the count of domain-empty cells detected during AC-3, giving a strictly better lower bound while remaining admissible.
+\noindent\textbf{Practical note:} although $h=0$ is weak, pruning still comes from AC-3 domain filtering.
+In the current `solve()` wrapper, if A* does not return a valid full grid, the system
+automatically falls back to backtracking+AC-3.
 
 \subsection{Brute-Force and Backtracking}
 
@@ -691,193 +808,139 @@ IS_CONSISTENT(assignment, i, j, v):
 \end{lstlisting}
 
 % ================================================================
-%            SECTION 4: EXPERIMENTAL SETUP
+%            SECTION 6: EXPERIMENTS AND EVALUATION
 % ================================================================
-\section{Experimental Setup}
 
-\subsection{Test Cases}
-
-At least 10 input files are provided, spanning grid sizes $4\times4$, $5\times5$, $6\times6$, $7\times7$, and $9\times9$:
-
-\begin{table}[H]
-\centering
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{|c|c|c|c|}
-\hline
-\textbf{File} & \textbf{Grid Size} & \textbf{Given Cells} & \textbf{Difficulty} \\
-\hline
-input-01.txt & $4 \times 4$ & \ldots & Easy \\
-input-02.txt & $4 \times 4$ & \ldots & Medium \\
-input-03.txt & $5 \times 5$ & \ldots & Easy \\
-input-04.txt & $5 \times 5$ & \ldots & Hard \\
-input-05.txt & $6 \times 6$ & \ldots & Easy \\
-input-06.txt & $6 \times 6$ & \ldots & Medium \\
-input-07.txt & $7 \times 7$ & \ldots & Medium \\
-input-08.txt & $7 \times 7$ & \ldots & Hard \\
-input-09.txt & $9 \times 9$ & \ldots & Medium \\
-input-10.txt & $9 \times 9$ & \ldots & Hard \\
-\hline
-\end{tabular}
-\caption{Summary of test cases.}
-\end{table}
-
-\subsection{Environment}
-
+\section{Experiments and Evaluation}
+\subsection{Evaluation Protocol}
+The benchmark set includes \texttt{input-01.txt} to \texttt{input-10.txt} in \texttt{inputs/},
+covering grid sizes $4\times4$, $5\times5$, $6\times6$, $7\times7$, and $9\times9$.
+For each algorithm (\texttt{forward}, \texttt{backward}, \texttt{astar}, \texttt{backtracking}, \texttt{bruteforce}),
+we record:
 \begin{itemize}
-    \item \textbf{Language:} Python 3.11
-    \item \textbf{Hardware:} \ldots (CPU, RAM)
-    \item \textbf{OS:} \ldots
-    \item \textbf{Metrics:} Wall-clock runtime (seconds), peak memory usage (MB), number of inferences/nodes expanded.
+    \item runtime (\textbf{milliseconds}, measured by benchmark runner),
+    \item expanded nodes (\texttt{nodes\_expanded}),
+    \item solution steps (derived from trace events \texttt{set/propagate/commit}).
 \end{itemize}
 
-% ================================================================
-%            SECTION 5: RESULTS
-% ================================================================
-\section{Experimental Results}
+\subsection{Executed Benchmark Artifacts}
+The benchmark was executed from:
+\begin{itemize}
+    \item \texttt{python statistic/benchmark.py}
+    \item \texttt{python statistic/plot\_results.py}
+\end{itemize}
 
-\subsection{Runtime Comparison (seconds)}
+Generated files:
+\begin{itemize}
+    \item Raw CSV: \texttt{benchmark\_results.csv}
+    \item Chart images in \texttt{statistic/}: \texttt{execution\_time\_per\_testcase.png}, \texttt{nodes\_expanded\_per\_testcase.png}, \texttt{solution\_steps\_per\_testcase.png}, and overall comparison images.
+\end{itemize}
 
+\subsection{Observed Aggregate Results}
 \begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.3}
-\small
-\begin{tabular}{|c|c|c|c|c|c|}
+\begin{tabularx}{\textwidth}{|l|c|c|c|c|}
 \hline
-\textbf{Test} & \textbf{Size} & \textbf{Forward} & \textbf{Backward} & \textbf{A*} & \textbf{Backtrack} \\
+\textbf{Algorithm} & \textbf{Avg Time (ms)} & \textbf{Max Time (ms)} & \textbf{Avg Nodes} & \textbf{Avg Steps} \\
 \hline
-input-01 & $4\times4$ & TODO & TODO & TODO & TODO \\
-input-02 & $4\times4$ & TODO & TODO & TODO & TODO \\
-input-03 & $5\times5$ & TODO & TODO & TODO & TODO \\
-input-04 & $5\times5$ & TODO & TODO & TODO & TODO \\
-input-05 & $6\times6$ & TODO & TODO & TODO & TODO \\
-input-06 & $6\times6$ & TODO & TODO & TODO & TODO \\
-input-07 & $7\times7$ & TODO & TODO & TODO & TODO \\
-input-08 & $7\times7$ & TODO & TODO & TODO & TODO \\
-input-09 & $9\times9$ & TODO & TODO & TODO & TODO \\
-input-10 & $9\times9$ & TODO & TODO & TODO & TODO \\
+backtracking & 6.702 & 27.270 & 2.5 & 23.5 \\
+forward & 9.057 & 32.985 & 3.5 & 32.6 \\
+astar & 30.954 & 221.896 & 2.2 & 48.6 \\
+backward & 222.713 & 1833.161 & 11532.9 & 9397.8 \\
+bruteforce & 1023.725 & 9137.582 & 9367.7 & 84119.6 \\
 \hline
-\end{tabular}
-\caption{Runtime (seconds) for each algorithm on all test cases.}
+\end{tabularx}
+\caption{Aggregate statistics computed from \texttt{benchmark\_results.csv}.}
 \end{table}
 
-\subsection{Nodes Expanded / Inferences Made}
+\subsection{Placeholders for Manual Figures/Tables}
+\begin{warnbox}[Insert your own screenshots/diagrams here]
+If you need to add custom screenshots (GUI, trace replay, architecture diagram), keep the following placeholders and replace file names later.
+\end{warnbox}
 
-\begin{table}[H]
-\centering
-\renewcommand{\arraystretch}{1.3}
-\small
-\begin{tabular}{|c|c|c|c|c|c|}
-\hline
-\textbf{Test} & \textbf{Size} & \textbf{Forward} & \textbf{Backward} & \textbf{A*} & \textbf{Backtrack} \\
-\hline
-input-01 & $4\times4$ & TODO & TODO & TODO & TODO \\
-input-02 & $4\times4$ & TODO & TODO & TODO & TODO \\
-input-03 & $5\times5$ & TODO & TODO & TODO & TODO \\
-input-04 & $5\times5$ & TODO & TODO & TODO & TODO \\
-input-05 & $6\times6$ & TODO & TODO & TODO & TODO \\
-input-06 & $6\times6$ & TODO & TODO & TODO & TODO \\
-input-07 & $7\times7$ & TODO & TODO & TODO & TODO \\
-input-08 & $7\times7$ & TODO & TODO & TODO & TODO \\
-input-09 & $9\times9$ & TODO & TODO & TODO & TODO \\
-input-10 & $9\times9$ & TODO & TODO & TODO & TODO \\
-\hline
-\end{tabular}
-\caption{Number of inferences / nodes expanded per algorithm.}
-\end{table}
+\begin{figure}[H]
+  \centering
+  % Replace with your own exported chart or screenshot
+  \includegraphics[width=\textwidth]{statistic/execution_time_per_testcase.png}
+  \caption{Execution time per test case (auto-generated chart).}
+\end{figure}
 
-\subsection{Charts}
+\begin{figure}[H]
+  \centering
+  % Replace with your own exported chart or screenshot
+  \includegraphics[width=\textwidth]{statistic/nodes_expanded_per_testcase.png}
+  \caption{Nodes expanded per test case (auto-generated chart).}
+\end{figure}
 
-% TODO: Insert runtime comparison chart
-% \begin{figure}[H]
-%   \centering
-%   \includegraphics[width=\textwidth]{figures/runtime_comparison.png}
-%   \caption{Runtime comparison across algorithms and puzzle sizes.}
-% \end{figure}
+\begin{figure}[H]
+  \centering
+  % TODO: replace with your diagram/screenshot if needed
+  % \includegraphics[width=0.9\textwidth]{asset/your_system_diagram.png}
+  \fbox{\parbox{0.9\textwidth}{\centering
+  Placeholder for custom architecture diagram / GUI screenshot / solver trace screenshot.}}
+  \caption{Custom figure placeholder (manual insertion).}
+\end{figure}
 
-% TODO: Insert nodes expanded chart
-% \begin{figure}[H]
-%   \centering
-%   \includegraphics[width=\textwidth]{figures/nodes_expanded.png}
-%   \caption{Nodes expanded / inferences made comparison.}
-% \end{figure}
+\subsection{Notes}
+\begin{itemize}
+    \item On this machine and current code version, \texttt{backtracking} and \texttt{forward} are fastest by average runtime.
+    \item \texttt{astar} keeps very low node counts but has additional overhead from state handling/propagation.
+    \item \texttt{backward} and especially \texttt{bruteforce} scale poorly on hard $9\times9$ inputs (\texttt{input-09}, \texttt{input-10}).
+\end{itemize}
 
-\begin{warnbox}[Note]
-Charts comparing runtime, memory, and inferences will be inserted here after experiments are complete. Each chart should compare all four algorithms across the 10 test cases.
+\begin{warnbox}[Optional manual table slot]
+If you want a fully custom table style (drawn by hand in Word/Excel), insert exported image below:
+\begin{center}
+% \includegraphics[width=\textwidth]{asset/benchmark_table_manual.png}
+\fbox{\parbox{0.92\textwidth}{\centering Placeholder for manual benchmark table image}}
+\end{center}
+\end{warnbox}
+
+\begin{warnbox}[Reproducibility]
+If you re-run benchmark on another machine, update this section from the new \texttt{benchmark\_results.csv} before final submission.
 \end{warnbox}
 
 % ================================================================
-%            SECTION 6: COMPARATIVE ANALYSIS
+%            SECTION 7: DISCUSSION AND CONCLUSION
 % ================================================================
-\section{Comparative Analysis}
+\section{Discussion and Conclusion}
 
-\subsection{Forward Chaining}
-
-Forward chaining is highly effective on well-constrained puzzles (many given clues and inequality chains), often solving $4\times4$ and $5\times5$ instances without any backtracking. Its arc-consistency propagation eliminates large swaths of the search space in polynomial time per iteration. However, on sparse $9\times9$ instances with few given cells, it may reach a fixed-point before fully determining the solution, requiring supplementary backtracking.
-
-\begin{notebox}[Preferred when:]
-Puzzle is heavily constrained (many givens or inequalities); solving grids of size up to $6\times6$.
-\end{notebox}
-
-\subsection{Backward Chaining (SLD Resolution)}
-
-Backward chaining queries individual cells top-down, making it convenient for partial queries (\textit{``what is the value of cell $(i,j)$?''}). It avoids computing the entire solution when only a subset of values is needed. However, its depth-first nature can lead to deep recursion and redundant sub-goal evaluation on larger grids without memoization.
-
-\begin{notebox}[Preferred when:]
-Only a subset of cell values needs to be queried; small to medium puzzle sizes; Prolog-style reasoning is required.
-\end{notebox}
-
-\subsection{A* Search}
-
-A* with the AC-3 heuristic consistently expands far fewer nodes than backtracking. The MRV (Minimum Remaining Values) cell selection policy focuses effort on the most constrained cells first, producing tight branch pruning. On $7\times7$ and $9\times9$ puzzles, A* demonstrates clear advantages in node count over backtracking, at the cost of higher memory due to the open list.
-
-\begin{notebox}[Preferred when:]
-Large puzzle sizes; correctness and optimality (in terms of steps) are required; memory is not a bottleneck.
-\end{notebox}
-
-\subsection{Brute-Force and Backtracking}
-
-Brute-force is infeasible beyond $4\times4$. Plain backtracking serves as a practical baseline: it is simpler to implement and uses negligible memory, but expands exponentially more nodes than A* on hard instances. It remains a useful correctness oracle for verifying other solvers.
-
-\begin{notebox}[Preferred when:]
-Verification of other algorithms; simple implementation needed; only small grids.
-\end{notebox}
+\subsection{Discussion by Implementation Characteristics}
+\begin{itemize}
+    \item \textbf{Forward chaining:} AC-3 + singleton propagation first, then fallback backtracking when needed.
+    \item \textbf{Backward chaining:} depth-first goal reduction over cell assignments (SLD-like strategy).
+    \item \textbf{A*:} uses admissible $h=0$ with propagated domains; wrapper validates output and falls back if needed.
+    \item \textbf{Backtracking:} DFS with consistency checks and AC-3 pruning.
+    \item \textbf{Brute-force:} DFS baseline without informed pruning.
+\end{itemize}
 
 \subsection{Summary}
 
 \begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.4}
-\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\begin{tabularx}{\textwidth}{|l|X|X|}
 \hline
-\textbf{Algorithm} & \textbf{Speed (relative)} & \textbf{Memory} & \textbf{Best Use Case} \\
+\textbf{Algorithm} & \textbf{Current implementation role} & \textbf{Notes} \\
 \hline
-Forward Chaining & Fast on constrained & Low & $\leq 6\times6$, dense constraints \\
-Backward Chaining & Medium & Low & Partial queries, small grids \\
-A* & Fast on large & Medium--High & $\geq 7\times7$, full solution needed \\
-Backtracking & Slow & Low & Correctness verification \\
-Brute-Force & Very slow & Low & $4\times4$ only \\
+Forward Chaining & Constraint propagation solver & Falls back to backtracking if unresolved \\
+Backward Chaining & SLD-like DFS solver & Goal-driven recursive assignment \\
+A* & Informed search path & Uses $h=0$, with validity check + fallback \\
+Backtracking & Core exact fallback solver & AC-3 assisted DFS \\
+Brute-Force & Baseline comparison solver & Minimal pruning baseline \\
 \hline
 \end{tabularx}
-\caption{Algorithm comparison summary.}
+\caption{Algorithm summary aligned with current codebase behavior.}
 \end{table}
 
-% ================================================================
-%            SECTION 7: DEMO VIDEO LINKS
-% ================================================================
-\section{Demonstration Video Links}
-
-Three demonstration videos covering different grid sizes are available at the following links:
-
-\begin{itemize}
-    \item \textbf{Demo 1} ($4\times4$ puzzle, forward chaining): \\
-          \url{https://} \rule{8cm}{0.4pt}
-    \item \textbf{Demo 2} ($6\times6$ puzzle, A* search): \\
-          \url{https://} \rule{8cm}{0.4pt}
-    \item \textbf{Demo 3} ($9\times9$ puzzle, backtracking vs A* comparison): \\
-          \url{https://} \rule{8cm}{0.4pt}
-\end{itemize}
-
-Each video starts from the command line, shows the input file content, and walks through key algorithmic steps (facts inferred by forward chaining, nodes expanded by A*, etc.).
+\subsection{Conclusion}
+The current project provides a GUI-first Futoshiki solver system with five algorithms,
+trace replay, and output export. The report now matches the implemented architecture:
+core CSP utilities in \texttt{futoshiki\_core.py}, algorithm modules in \texttt{source/algorithm/},
+and GUI entrypoint at \texttt{source/main.py}. Quantitative benchmark results in this report
+are generated from the new \texttt{statistic/benchmark.py} and \texttt{statistic/plot\_results.py}
+pipeline and can be refreshed by re-running those scripts.
 
 % ================================================================
 %            SECTION 8: REFERENCES
