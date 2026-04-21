@@ -1,3 +1,7 @@
+# Core solver logic uses Python stdlib only.
+# Main GUI: PySide6 (Qt).
 PySide6
+
+# Plotting (benchmark charts).
 matplotlib
 numpy

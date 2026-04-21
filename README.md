@@ -7,13 +7,19 @@ This repository follows the submission organization required by the assignment.
 ```text
 BTVN/
   source/
-    main.py
-    gui_qt.py
-    gui_customtk.py
-    gui.py
+    algorithm/
+      astar.py
+      backtracking.py
+      backward.py
+      bruteforce.py
+      forward.py
+    ui/
+      src/
+      electron/
+      package.json
     futoshiki_core.py
     solvers.py
-    ground_kb.py
+    api_server.py
   inputs/
     input-01.txt ... input-10.txt
   outputs/
@@ -25,31 +31,44 @@ BTVN/
 
 ## Run
 
-## GUI (optional +10%)
+### New JS Liquid UI (recommended)
 
-Install dependencies:
+This mode keeps **all solving algorithms in Python**, but moves the app UI to React for richer visuals and smoother motion.
+
+1) Start Python API backend:
 
 ```bash
 pip install -r requirements.txt
+uvicorn source.api_server:app --reload --port 8000
 ```
 
-### Tkinter GUI (stdlib + tk only)
+2) Start React UI:
 
 ```bash
-python source/gui.py
+cd source/ui
+npm install
+npm run dev
 ```
 
-Tkinter ships with CPython (on Linux you may need `python3-tk`). Same features as below, drawn with Tk `Canvas`.
+Open `http://localhost:5173`.
 
-### PySide6 GUI (default)
+The web UI calls Python endpoints (`/api/solve`, `/api/puzzle/parse`, `/api/puzzle/validate`, `/api/export`) so Futoshiki rules and solver behavior remain unchanged.
+It also supports loading sample testcases directly from the repo `inputs/` folder and running trace replay from solver events.
+
+### Desktop wrapper (Electron)
+
+Run the web UI as a desktop app (native-like window) while solver logic still runs in Python:
 
 ```bash
-python source/main.py
+cd source/ui
+npm install
+npm run desktop
 ```
 
-Uses **PySide6** with custom-painted board and liquid-glass inspired visual style, preserving solver logic and inequality/arrow rules.
-
-Legacy UIs still exist in `source/gui_customtk.py` and `source/gui.py` if needed.
+`npm run desktop` will:
+- build the React UI
+- launch an Electron window
+- auto-start Python backend (`uvicorn source.api_server:app`) from repo root
 
 Supported algorithms:
 - `forward`
@@ -58,4 +77,4 @@ Supported algorithms:
 - `backtracking`
 - `bruteforce`
 
-CLI mode was removed; `source/main.py` is now the UI entrypoint.
+The legacy Qt/Tk UIs were removed; the JS UI is the only UI in this repo.
