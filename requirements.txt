@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-PySide6
-=======
 # Core solver logic uses Python stdlib only.
-# Main GUI: PySide6 (Qt).
-PySide6
->>>>>>> main
+# UI uses React/Electron; Python provides the solver API.
+fastapi
+uvicorn

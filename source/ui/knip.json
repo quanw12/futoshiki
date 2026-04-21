@@ -1,0 +1,5 @@
+{
+  "entry": [
+    "electron/main.cjs"
+  ]
+}
