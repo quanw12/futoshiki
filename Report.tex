@@ -15,7 +15,7 @@
 \usepackage{enumitem}
 \usepackage{tabularx}
 \usepackage{booktabs}
-\usepackage{adjustbox}  % Thêm dòng này vào đầu file (preamble)
+% (keep only one adjustbox import)
 \usepackage{caption}
 \usepackage{float}
 \usepackage{tcolorbox}
@@ -119,6 +119,20 @@
     breakable,
     sharp corners,
     boxrule=0.8pt,
+    left=8pt,
+    right=8pt,
+    top=6pt,
+    bottom=6pt,
+}
+
+\newtcolorbox{axiombox}[1][]{
+    colback=gray!4,
+    colframe=black!60,
+    fonttitle=\bfseries,
+    title={#1},
+    breakable,
+    sharp corners,
+    boxrule=0.7pt,
     left=8pt,
     right=8pt,
     top=6pt,
@@ -356,7 +370,7 @@ Below is the video link demonstrating the gameplay of our Futoshiki Puzzles Solv
 1 & Lê Phúc Khang (24127180) 
     & \begin{tabular}{@{}l@{}}
         - FOL formalization + CNF derivation \\
-        - A* implementation + heuristic \\
+        - Correctness check, comparison write-up
         - Heuristic proof in report
       \end{tabular} 
     & 100\% \\
@@ -373,14 +387,14 @@ Below is the video link demonstrating the gameplay of our Futoshiki Puzzles Solv
     & \begin{tabular}{@{}l@{}}
         - Backward chaining (SLD) \\
         - Backtracking + brute-force baselines \\
-        - Correctness check + comparison write-up
+        - Replay + file I/O bridge \\
       \end{tabular} 
     & 100\% \\
 \hline
 4 & Nguyễn Dương Gia Thuận (24127551) 
     & \begin{tabular}{@{}l@{}}
         - PySide6 GUI integration \\
-        - Replay + file I/O bridge \\
+        - A* implementation + heuristic \\
         - System test + demo + packaging
       \end{tabular} 
     & 100\% \\
@@ -427,420 +441,349 @@ Below is the video link demonstrating the gameplay of our Futoshiki Puzzles Solv
 \section{Inference Problem Formulation}
 
 \subsection{State Space}
-One state is a partial assignment of cells to values in $1..N$, together with current feasible domains after constraint propagation.
+Let $N$ be puzzle size. A state is represented by:
+\begin{itemize}
+    \item a partial assignment $A = \{(i,j)\mapsto v\}$ for some cells,
+    \item a domain map $D(i,j)\subseteq\{1,\dots,N\}$ for every cell after propagation.
+\end{itemize}
+In the implementation, domains are maintained by AC-3 style filtering in \texttt{futoshiki\_core.py}.
 
 \subsection{Initial State}
-The initial state is built from:
+The initial state is created from one input file:
 \begin{itemize}
-    \item given clues in the input file,
-    \item full candidate domains for empty cells,
-    \item immediate pruning by AC-3.
+    \item read fixed clues (\texttt{grid}),
+    \item initialize domains for empty cells as $\{1,\dots,N\}$,
+    \item enforce clues as singleton domains,
+    \item run initial constraint propagation (AC-3).
 \end{itemize}
 
 \subsection{Actions}
-An action assigns a value to one unresolved cell (typically selected by MRV for informed methods), then runs propagation.
+An action assigns one value to one unresolved cell:
+\[
+a = \text{Assign}(i,j,v),\quad v\in D(i,j)
+\]
+After action, constraints are propagated. If any domain becomes empty, the successor is rejected.
 
 \subsection{Transition Model}
-After assigning $(i,j)=v$, the solver updates row/column uniqueness and inequality constraints.  
-States violating constraints are rejected.
+Transition $T(s,a)\rightarrow s'$ includes:
+\begin{enumerate}
+    \item set $(i,j)=v$,
+    \item propagate row/column all-different constraints,
+    \item propagate horizontal and vertical inequality constraints,
+    \item update domains and inferred singletons.
+\end{enumerate}
 
 \subsection{Goal State}
-A state is goal if:
+A goal state satisfies all:
 \begin{itemize}
-    \item all cells are assigned,
-    \item all row/column uniqueness constraints hold,
+    \item every cell assigned exactly one value in $[1,N]$,
+    \item each row is a permutation of $1..N$,
+    \item each column is a permutation of $1..N$,
     \item all inequalities hold,
-    \item all clues remain unchanged.
+    \item all given clues are preserved.
 \end{itemize}
 
-\subsection{Cost Model}
-For search-based solvers, one branch assignment contributes unit step cost.  
-Runtime, expanded nodes, and memory estimate are used for practical comparison.
+\subsection{Action Cost}
+For search algorithms, one explicit branching decision has unit cost.  
+Practically, we evaluate runtime, nodes expanded, and solution-steps from trace.
 
-\subsection{Vocabulary}
-
-All predicates follow the assignment vocabulary. The index sort is $\{1, 2, \ldots, N\}$ used for rows, columns, and values.
-
+\subsection{FOL Vocabulary}
 \begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{|c|c|l|}
 \hline
-\textbf{Predicate} & \textbf{Arity} & \textbf{Intended Meaning} \\
+\textbf{Predicate} & \textbf{Arity} & \textbf{Meaning} \\
 \hline
-$Val(i,j,v)$ & 3 & Cell $(i,j)$ is assigned value $v$ \\
-$Given(i,j,v)$ & 3 & Cell $(i,j)$ has pre-filled clue $v$ \\
-$LessH(i,j)$ & 2 & ``$<$'' constraint between $(i,j)$ and $(i,j+1)$ \\
-$GreaterH(i,j)$ & 2 & ``$>$'' constraint between $(i,j)$ and $(i,j+1)$ \\
-$LessV(i,j)$ & 2 & ``$<$'' constraint between $(i,j)$ and $(i+1,j)$ \\
-$GreaterV(i,j)$ & 2 & ``$>$'' constraint between $(i,j)$ and $(i+1,j)$ \\
-$Less(v_1, v_2)$ & 2 & Background arithmetic: $v_1 < v_2$ \\
+$Val(i,j,v)$ & 3 & Cell $(i,j)$ has value $v$ \\
+$Given(i,j,v)$ & 3 & Cell $(i,j)$ is pre-filled with $v$ \\
+$LessH(i,j)$ & 2 & $(i,j) < (i,j+1)$ relation exists \\
+$GreaterH(i,j)$ & 2 & $(i,j) > (i,j+1)$ relation exists \\
+$LessV(i,j)$ & 2 & $(i,j) < (i+1,j)$ relation exists \\
+$GreaterV(i,j)$ & 2 & $(i,j) > (i+1,j)$ relation exists \\
+$Less(v_1,v_2)$ & 2 & Arithmetic relation $v_1 < v_2$ \\
 \hline
 \end{tabular}
-\caption{Predicate vocabulary.}
+\caption{Predicate vocabulary used for Futoshiki formalization.}
 \end{table}
 
-\subsection{Complete FOL Axioms}
-
-\begin{axiombox}[A1 -- Every cell has at least one value]
-$\displaystyle \forall i\; \forall j\; \exists v\quad Val(i,j,v)$
+\subsection{Core FOL Axioms}
+\begin{axiombox}[A1 -- Existence]
+$\forall i\forall j\exists v\; Val(i,j,v)$
+\end{axiombox}
+\begin{axiombox}[A2 -- Uniqueness per cell]
+$\forall i\forall j\forall v_1\forall v_2\;(Val(i,j,v_1)\land Val(i,j,v_2))\Rightarrow v_1=v_2$
+\end{axiombox}
+\begin{axiombox}[A3 -- Row uniqueness]
+$\forall i\forall j_1\forall j_2\forall v\;(Val(i,j_1,v)\land Val(i,j_2,v)\land j_1\neq j_2)\Rightarrow \bot$
+\end{axiombox}
+\begin{axiombox}[A4 -- Column uniqueness]
+$\forall j\forall i_1\forall i_2\forall v\;(Val(i_1,j,v)\land Val(i_2,j,v)\land i_1\neq i_2)\Rightarrow \bot$
+\end{axiombox}
+\begin{axiombox}[A5 -- Value range]
+$\forall i\forall j\forall v\; Val(i,j,v)\Rightarrow (v=1\lor\dots\lor v=N)$
+\end{axiombox}
+\begin{axiombox}[A6-A9 -- Inequality constraints]
+Horizontal and vertical less/greater predicates imply corresponding arithmetic ordering between adjacent assigned values.
+\end{axiombox}
+\begin{axiombox}[A10 -- Clue preservation]
+$\forall i\forall j\forall v\; Given(i,j,v)\Rightarrow Val(i,j,v)$
 \end{axiombox}
 
-\begin{axiombox}[A2 -- Every cell has at most one value]
-$\displaystyle \forall i\; \forall j\; \forall v_1\; \forall v_2 \quad
-\bigl(Val(i,j,v_1) \land Val(i,j,v_2)\bigr) \Rightarrow v_1 = v_2$
-\end{axiombox}
-
-\begin{axiombox}[A3 -- Row uniqueness (no duplicate in same row)]
-$\displaystyle \forall i\; \forall j_1\; \forall j_2\; \forall v \quad
-\bigl(Val(i,j_1,v) \land Val(i,j_2,v) \land j_1 \neq j_2\bigr) \Rightarrow \bot$
-\end{axiombox}
-
-\begin{axiombox}[A4 -- Column uniqueness (no duplicate in same column)]
-$\displaystyle \forall j\; \forall i_1\; \forall i_2\; \forall v \quad
-\bigl(Val(i_1,j,v) \land Val(i_2,j,v) \land i_1 \neq i_2\bigr) \Rightarrow \bot$
-\end{axiombox}
-
-\begin{axiombox}[{A5 -- Value completeness (values stay within $[1,N]$)}]
-$\displaystyle \forall i\; \forall j\; \forall v \quad Val(i,j,v) \Rightarrow \bigl(v = 1 \lor v = 2 \lor \cdots \lor v = N\bigr)$
-\end{axiombox}
-
-\begin{axiombox}[A6 -- Horizontal less-than constraint]
-$\displaystyle \forall i\; \forall j\; \forall v_1\; \forall v_2 \quad
-\bigl(LessH(i,j) \land Val(i,j,v_1) \land Val(i,j{+}1,v_2)\bigr) \Rightarrow Less(v_1, v_2)$
-\end{axiombox}
-
-\begin{axiombox}[A7 -- Horizontal greater-than constraint]
-$\displaystyle \forall i\; \forall j\; \forall v_1\; \forall v_2 \quad
-\bigl(GreaterH(i,j) \land Val(i,j,v_1) \land Val(i,j{+}1,v_2)\bigr) \Rightarrow Less(v_2, v_1)$
-\end{axiombox}
-
-\begin{axiombox}[A8 -- Vertical less-than constraint]
-$\displaystyle \forall i\; \forall j\; \forall v_1\; \forall v_2 \quad
-\bigl(LessV(i,j) \land Val(i,j,v_1) \land Val(i{+}1,j,v_2)\bigr) \Rightarrow Less(v_1, v_2)$
-\end{axiombox}
-
-\begin{axiombox}[A9 -- Vertical greater-than constraint]
-$\displaystyle \forall i\; \forall j\; \forall v_1\; \forall v_2 \quad
-\bigl(GreaterV(i,j) \land Val(i,j,v_1) \land Val(i{+}1,j,v_2)\bigr) \Rightarrow Less(v_2, v_1)$
-\end{axiombox}
-
-\begin{axiombox}[A10 -- Given clues are enforced]
-$\displaystyle \forall i\; \forall j\; \forall v \quad Given(i,j,v) \Rightarrow Val(i,j,v)$
-\end{axiombox}
-
-\subsection{Derivation of CNF Forms (Three Non-trivial Axioms)}
-
-\subsubsection{Axiom A1: At Least One Value per Cell}
-
-\textbf{Original FOL sentence:}
+\subsection{CNF Derivation (Representative)}
+\textbf{A1 (at least one value):}
 \[
-\forall i\; \forall j\; \exists v \quad Val(i,j,v)
+\forall i\forall j\exists v\;Val(i,j,v)\;\Rightarrow\;Val(i,j,f(i,j))
 \]
-
-\textbf{Step 1 -- Skolemization.} The existential quantifier $\exists v$ is replaced by a Skolem function $f(i,j)$ depending on all universally quantified variables in scope:
+\textbf{A2 (at most one value):}
 \[
-\forall i\; \forall j \quad Val\bigl(i,\; j,\; f(i,j)\bigr)
+\neg Val(i,j,v_1)\lor \neg Val(i,j,v_2)\quad (v_1\neq v_2)
 \]
-
-\textbf{Step 2 -- Drop universal quantifiers} (standard CNF convention):
+\textbf{A6 (horizontal <):}
 \[
-Val\bigl(i,\; j,\; f(i,j)\bigr)
+\neg LessH(i,j)\lor\neg Val(i,j,v_1)\lor\neg Val(i,j+1,v_2)\lor Less(v_1,v_2)
 \]
-
-\textbf{CNF (single unit clause):}
-\[
-\boxed{Val(i,\; j,\; f(i,j))}
-\]
-
-\noindent When grounded over domain $\{1,\ldots,N\}$, this produces $N^2$ ground unit clauses, one per cell.
-
-\subsubsection{Axiom A2: At Most One Value per Cell}
-
-\textbf{Original FOL sentence:}
-\[
-\forall i\; \forall j\; \forall v_1\; \forall v_2 \quad \bigl(Val(i,j,v_1) \land Val(i,j,v_2)\bigr) \Rightarrow v_1 = v_2
-\]
-
-\textbf{Step 1 -- Eliminate implication} ($\phi \Rightarrow \psi \equiv \neg\phi \lor \psi$):
-\[
-\forall i\; \forall j\; \forall v_1\; \forall v_2 \quad
-\neg\bigl(Val(i,j,v_1) \land Val(i,j,v_2)\bigr) \lor (v_1 = v_2)
-\]
-
-\textbf{Step 2 -- Apply De Morgan:}
-\[
-\forall i\; \forall j\; \forall v_1\; \forall v_2 \quad
-\neg Val(i,j,v_1) \lor \neg Val(i,j,v_2) \lor (v_1 = v_2)
-\]
-
-\textbf{Step 3 -- Handle equality.} We treat $v_1 = v_2$ via the contrapositive: for distinct $v_1 \neq v_2$, no cell can hold both values. Grounded for all $v_1 \neq v_2$:
-
-\textbf{CNF (one clause per distinct value pair per cell):}
-\[
-\boxed{\neg Val(i,j,v_1) \lor \neg Val(i,j,v_2)}
-\quad \text{for each } v_1 \neq v_2
-\]
-
-\subsubsection{Axiom A6: Horizontal Less-Than Constraint}
-
-\textbf{Original FOL sentence:}
-\[
-\forall i\; \forall j\; \forall v_1\; \forall v_2 \quad
-\bigl(LessH(i,j) \land Val(i,j,v_1) \land Val(i,j{+}1,v_2)\bigr) \Rightarrow Less(v_1, v_2)
-\]
-
-\textbf{Step 1 -- Eliminate implication:}
-\[
-\neg\bigl(LessH(i,j) \land Val(i,j,v_1) \land Val(i,j{+}1,v_2)\bigr) \lor Less(v_1, v_2)
-\]
-
-\textbf{Step 2 -- Apply De Morgan:}
-\[
-\neg LessH(i,j) \lor \neg Val(i,j,v_1) \lor \neg Val(i,j{+}1,v_2) \lor Less(v_1, v_2)
-\]
-
-\textbf{Step 3 -- Ground $Less(v_1, v_2)$.} Since $Less$ is a background arithmetic predicate, it evaluates to $\top$ when $v_1 < v_2$ and $\bot$ otherwise. Clauses where $v_1 \geq v_2$ become:
-
-\textbf{CNF (for each $v_1 \geq v_2$):}
-\[
-\boxed{\neg LessH(i,j) \lor \neg Val(i,j,v_1) \lor \neg Val(i,j{+}1,v_2)}
-\]
-
-This clause forbids assigning $v_1$ to cell $(i,j)$ and $v_2$ to cell $(i,j+1)$ when a ``$<$'' constraint exists and $v_1 \geq v_2$.
+and grounded forbidding clauses for $v_1\ge v_2$.
 
 % ================================================================
-%            SECTION 5: ALGORITHMS
+%            SECTION 5: INFERENCE ALGORITHMS
 % ================================================================
 \section{Inference Algorithms}
 
 \subsection{Automatic KB Generation}
+\subsubsection{Description}
+Generate grounded propositional clauses from FOL schemas for a concrete $N$.
+Each grounded atom corresponds to a Boolean variable encoding $Val(i,j,v)$.
 
-Given size $N$, the algorithm instantiates all FOL axioms over the concrete domain $\{1,\ldots,N\}$.
+\subsubsection{Algorithm Analysis}
+\begin{itemize}
+    \item Covers cell constraints, row/column uniqueness, inequality, and clues.
+    \item Produces CNF-like clauses usable for validation/consistency checking.
+    \item Complexity grows quickly with $N$ due to combinatorial grounding.
+\end{itemize}
 
-\begin{notebox}[Overview]
-For each axiom schema, substitute all valid combinations of indices $(i, j, v)$ from $\{1,\ldots,N\}$ to produce a fully grounded propositional knowledge base (KB) in CNF. In this project, the grounded clauses are generated and can be checked against a solved assignment via the internal CNF verifier utility.
-\end{notebox}
-
-\begin{lstlisting}[style=pseudostyle, caption={Automatic KB Generation}]
-GENERATE_KB(N):
+\subsubsection{Pseudocode}
+\begin{lstlisting}[style=pseudostyle, caption={Ground KB Generation}]
+GENERATE_GROUNDED_CLAUSES(N, puzzle):
   clauses = []
-  for each i, j in {1..N} x {1..N}:
-    # A1: at-least-one value per cell
-    clauses.add( {Val(i,j,v) : v in 1..N} )
-    # A2: at-most-one value per cell
-    for each v1 != v2 in {1..N}:
-      clauses.add( {-Val(i,j,v1), -Val(i,j,v2)} )
-    # A3: row uniqueness
-    for each j1 != j2, v:
-      clauses.add( {-Val(i,j1,v), -Val(i,j2,v)} )
-    # A4: column uniqueness
-    for each i1 != i2, v:
-      clauses.add( {-Val(i1,j,v), -Val(i2,j,v)} )
-    # A6/A7: horizontal inequality clauses
-    if LessH(i,j) is a given fact and j < N:
-      for each v1 >= v2 in {1..N}:
-        clauses.add( {-Val(i,j,v1), -Val(i,j+1,v2)} )
-    # A8/A9: vertical inequality clauses (similarly)
-    # A10: given clues
-    if Given(i,j,v) is a fact:
-      clauses.add( {Val(i,j,v)} )
+  add at-least-one clauses for each cell
+  add at-most-one clauses for each cell/value pair
+  add row uniqueness clauses
+  add column uniqueness clauses
+  add clue-enforcement clauses
+  add horizontal/vertical inequality clauses
   return clauses
 \end{lstlisting}
 
+\subsubsection{Step-by-Step Illustration}
+\begin{enumerate}
+    \item Select one cell $(i,j)$ and create candidate literals $Val(i,j,1..N)$.
+    \item Add pairwise negatives to prevent multiple values in same cell.
+    \item Repeat for row/column conflict pairs and inequality-disallowed pairs.
+\end{enumerate}
+
 \subsection{Forward Chaining}
+\subsubsection{Description}
+Forward solver in this project is domain-driven: apply AC-3 + singleton elimination repeatedly.
+If unresolved cells remain after fixpoint, call backtracking+AC-3 completion.
 
-\textbf{Implementation in this project:} domain-propagation based forward reasoning.
-The solver initializes domains, runs AC-3 propagation, performs singleton elimination
-(row/column all-different propagation), and repeats until fixed point.
-If unresolved cells remain, it falls back to backtracking+AC-3 completion.
+\subsubsection{Algorithm Analysis}
+\begin{itemize}
+    \item Strong propagation, low branching on easy/medium puzzles.
+    \item Deterministic until fixpoint.
+    \item May need fallback when constraints are insufficient to finish.
+\end{itemize}
 
-\begin{lstlisting}[style=pseudostyle, caption={Forward Chaining Algorithm}]
-FORWARD_CHAINING(puzzle):
-  # Initialize domains
-  for each cell (i,j):
-    domain[i][j] = {1..N}
-  for each Given(i,j,v):
-    domain[i][j] = {v}    # enforce given clues
-
-  changed = True
-  while changed:
-    changed = False
-    for each cell (i,j) with |domain[i][j]| == 1:
-      assigned_val = the unique value in domain[i][j]
-      # Propagate row uniqueness
-      for each j' != j in same row:
-        if assigned_val in domain[i][j']:
-          domain[i][j'].remove(assigned_val)
-          changed = True
-      # Propagate column uniqueness
-      for each i' != i in same column:
-        if assigned_val in domain[i'][j]:
-          domain[i'][j].remove(assigned_val)
-          changed = True
-    # Propagate inequality constraints
-    for each LessH(i,j):
-      # val at (i,j) < val at (i,j+1)
-      min_right = min(domain[i][j+1])
-      domain[i][j] = {v : v < min_right, v in domain[i][j]}
-      max_left = max(domain[i][j])
-      domain[i][j+1] = {v : v > max_left, v in domain[i][j+1]}
-    # Repeat for GreaterH, LessV, GreaterV ...
-    # Check for contradiction
-    for each cell (i,j):
-      if domain[i][j] is empty:
-        return CONTRADICTION
-  if all cells have singleton domain:
-    return SOLUTION
-  else:
-    return BACKTRACKING_COMPLETION(domains)
+\subsubsection{Pseudocode}
+\begin{lstlisting}[style=pseudostyle, caption={Forward Chaining}]
+FORWARD_SOLVER(puzzle):
+  initialize domains from clues
+  repeat:
+    run AC3(domains)
+    eliminate row/column values from singleton cells
+  until no change
+  if complete: return solution
+  else: return BACKTRACKING_AC3(puzzle)
 \end{lstlisting}
 
-\subsection{Backward Chaining (SLD Resolution)}
+\subsubsection{Step-by-Step Illustration}
+\begin{enumerate}
+    \item In a $4\times4$ case, clue $(1,1)=2$ removes value 2 from same row/column.
+    \item Inequality $(1,2)<(1,3)$ prunes high values from left and low values from right.
+    \item New singleton appears; propagate again.
+    \item Stop when no domain changes.
+\end{enumerate}
 
-\textbf{Implementation in this project:} DFS-style SLD-like backward search over ordered goals
-($Val(i,j)$ by cell order). For each unassigned cell, candidate values are filtered by current
-row/column/inequality constraints, then recursively expanded.
+\subsection{Backward Chaining (SLD)}
+\subsubsection{Description}
+Backward solver performs depth-first goal reduction over ordered cells.
+For each target cell, valid candidates are computed from current partial assignment.
 
-\begin{lstlisting}[style=pseudostyle, caption={Backward Chaining (SLD Resolution)}]
-BACKWARD_CHAIN(goal Val(i,j,?), assignment):
-  if Val(i,j,_) already assigned:
-    return {assignment[i][j]}
-  candidates = {1..N}
-  # Prune via row uniqueness rule
-  for each j' in same row where Val(i,j',v') is assigned:
-    candidates.remove(v')
-  # Prune via column uniqueness rule
-  for each i' in same column where Val(i',j,v') is assigned:
-    candidates.remove(v')
-  # Prune via horizontal inequality rules
-  if LessH(i, j-1) and Val(i,j-1,v') assigned:
-    candidates = {v : v > v', v in candidates}
-  if LessH(i, j) and Val(i,j+1,v') assigned:
-    candidates = {v : v < v', v in candidates}
-  # (Repeat for GreaterH, LessV, GreaterV ...)
-  results = {}
-  for each v in candidates:
-    assignment[i][j] = v
-    # Recursively prove remaining unassigned cells
-    sub = BACKWARD_CHAIN(next_unassigned_goal, assignment)
-    if sub != FAILURE:
-      results.add(v)
-    assignment[i][j] = unassigned
-  return results if results != {} else FAILURE
+\subsubsection{Algorithm Analysis}
+\begin{itemize}
+    \item Goal-driven search, simple recursive structure.
+    \item Good for demonstrating SLD-style reasoning.
+    \item Can become deep and expensive on hard instances.
+\end{itemize}
+
+\subsubsection{Pseudocode}
+\begin{lstlisting}[style=pseudostyle, caption={Backward Chaining (SLD-like)}]
+SLD(k, assignment):
+  if k == total_cells: return assignment
+  c = ordered_cells[k]
+  if c already fixed: return SLD(k+1, assignment)
+  for v in CANDIDATES(c, assignment):
+    assignment[c] = v
+    ans = SLD(k+1, assignment)
+    if ans != FAILURE: return ans
+    unassign c
+  return FAILURE
 \end{lstlisting}
+
+\subsubsection{Step-by-Step Illustration}
+\begin{enumerate}
+    \item Goal $Val(1,2,?)$: candidates $\{1,3,4\}$ after local pruning.
+    \item Try 1; recursive call fails due to later inequality.
+    \item Backtrack, try 3; recursion continues.
+\end{enumerate}
 
 \subsection{A* Search}
+\subsubsection{Description}
+A* explores partial assignments with priority $f=g+h$.  
+Current implementation uses admissible $h=0$; practical pruning comes from AC-3 and domain filtering.
 
-\textbf{State:} a partial assignment plus domains obtained from AC-3 propagation.
+\subsubsection{Algorithm Analysis}
+\begin{itemize}
+    \item Theoretically optimal under current unit branching cost.
+    \item With $h=0$, behaves close to uniform-cost search.
+    \item Implementation includes validation and fallback in \texttt{solve()}.
+\end{itemize}
 
-\textbf{Transition cost:} each explicit branch assignment increases $g$ by 1.
-
-\textbf{Heuristic in current implementation:} $h(s)=0$.  
-This keeps A* admissible and consistent, effectively behaving as uniform-cost search over branch decisions, with tie-breakers on domain uncertainty.
-
-\begin{lstlisting}[style=pseudostyle, caption={A* Search Algorithm}]
+\subsubsection{Pseudocode}
+\begin{lstlisting}[style=pseudostyle, caption={A* Search}]
 A_STAR(puzzle):
-  start = initial_state(puzzle)
-  open = priority_queue()
-  open.push(start, f = 0 + h(start))
-  closed = {}
-
-  while open is not empty:
-    state = open.pop_min_f()
-    if state is COMPLETE_ASSIGNMENT:
-      return state.assignment
-    # Branch on one unresolved cell
-    cell = argmin over unassigned cells of |domain[cell]|
-
-    for each v in domain[cell]:
-      new_state = assign(state, cell, v)
-      new_state.domains = AC3_PROPAGATE(new_state)
-      if not CONTRADICTION(new_state):
-        g = state.g + 1
-        h = 0  # admissible and consistent
-        open.push(new_state, f = g + h)
-
-  return NO_SOLUTION
-\end{lstlisting}
-
-\subsection{Heuristic Admissibility Proof}
-\label{sec:heuristic}
-
-\begin{notebox}[Theorem: $h(s)=0$ is admissible]
-For every state $s$, true remaining cost $h^*(s) \ge 0 = h(s)$.  
-Therefore $h$ never overestimates and is admissible.  
-Because $h$ is constant, it is also consistent, so A* remains optimal under this cost model.
-\end{notebox}
-
-\noindent\textbf{Practical note:} although $h=0$ is weak, pruning still comes from AC-3 domain filtering.
-In the current `solve()` wrapper, if A* does not return a valid full grid, the system
-automatically falls back to backtracking+AC-3.
-
-\subsection{Brute-Force and Backtracking}
-
-\textbf{Brute-force:} Enumerate all $N^{N^2}$ possible assignments and test each against all constraints. Used only as a theoretical baseline.
-
-\textbf{Backtracking:} Depth-first search with constraint checking at each step. Attempts to fill cells in row-major order; prunes branches when a partial assignment violates any rule. No heuristic guidance.
-
-\begin{lstlisting}[style=pseudostyle, caption={Backtracking Solver}]
-BACKTRACK(assignment, empty_cells):
-  if empty_cells is empty:
-    return assignment  # complete solution
-  (i, j) = empty_cells[0]
-  for v in {1..N}:
-    if IS_CONSISTENT(assignment, i, j, v):
-      assignment[i][j] = v
-      result = BACKTRACK(assignment, empty_cells[1:])
-      if result != FAILURE:
-        return result
-      assignment[i][j] = unassigned
+  start = propagated_initial_state
+  push(start, f=0)
+  while open not empty:
+    s = pop_min_f(open)
+    if complete(s): return s
+    c = select_branch_cell(s)
+    for v in domain(c):
+      s2 = assign_and_propagate(s, c, v)
+      if feasible(s2):
+        g2 = g(s)+1
+        h2 = 0
+        push(s2, f=g2+h2)
   return FAILURE
-
-IS_CONSISTENT(assignment, i, j, v):
-  # Check row uniqueness
-  if v in {assignment[i][j'] : j' in row, j' != j}: return False
-  # Check column uniqueness
-  if v in {assignment[i'][j] : i' in col, i' != i}: return False
-  # Check horizontal inequalities
-  # Check vertical inequalities
-  return True
 \end{lstlisting}
+
+\subsubsection{Step-by-Step Illustration}
+\begin{enumerate}
+    \item Pop current minimum-$f$ partial assignment.
+    \item Choose one unresolved cell with smallest domain.
+    \item Branch by each candidate, propagate constraints, keep only feasible children.
+    \item Continue until full valid assignment.
+\end{enumerate}
+
+\subsection{Backtracking}
+\subsubsection{Description}
+DFS search with consistency checks and AC-3 support.
+Used both as standalone solver and fallback for incomplete higher-level strategies.
+
+\subsubsection{Algorithm Analysis}
+\begin{itemize}
+    \item Reliable exact solver.
+    \item Works well with pruning; still exponential worst case.
+    \item Low memory footprint compared to frontier-based search.
+\end{itemize}
+
+\subsubsection{Pseudocode}
+\begin{lstlisting}[style=pseudostyle, caption={Backtracking + AC-3}]
+BACKTRACK(state):
+  if complete(state): return state
+  c = choose_next_cell(state)
+  for v in candidates(c):
+    if consistent(c,v,state):
+      s2 = assign(c,v,state)
+      propagate(s2)   # AC-3
+      if feasible(s2):
+        ans = BACKTRACK(s2)
+        if ans != FAILURE: return ans
+  return FAILURE
+\end{lstlisting}
+
+\subsubsection{Step-by-Step Illustration}
+\begin{enumerate}
+    \item Select unresolved cell $(i,j)$.
+    \item Try one value and propagate.
+    \item If contradiction appears, undo and try next value.
+    \item Commit path when all cells are assigned.
+\end{enumerate}
+
+\subsection{Brute-Force}
+\subsubsection{Description}
+Plain DFS enumeration of assignments with minimal pruning.
+Included as baseline for comparison only.
+
+\subsubsection{Algorithm Analysis}
+\begin{itemize}
+    \item Simplest but least scalable.
+    \item Extremely expensive on large or hard instances.
+    \item Useful to show effect of informed pruning methods.
+\end{itemize}
+
+\subsubsection{Pseudocode}
+\begin{lstlisting}[style=pseudostyle, caption={Brute-Force Baseline}]
+BRUTE_FORCE(cells, assignment):
+  if all cells assigned: return assignment
+  pick next empty cell
+  for v in 1..N:
+    assign v
+    if constraints not violated:
+      ans = BRUTE_FORCE(...)
+      if ans != FAILURE: return ans
+    unassign
+  return FAILURE
+\end{lstlisting}
+
+\subsubsection{Step-by-Step Illustration}
+\begin{enumerate}
+    \item Fill first empty cell with 1,2,3,... sequentially.
+    \item Keep descending until contradiction.
+    \item Backtrack and repeat.
+\end{enumerate}
 
 % ================================================================
 %            SECTION 6: EXPERIMENTS AND EVALUATION
 % ================================================================
-
 \section{Experiments and Evaluation}
-\subsection{Evaluation Protocol}
-The benchmark set includes \texttt{input-01.txt} to \texttt{input-10.txt} in \texttt{inputs/},
-covering grid sizes $4\times4$, $5\times5$, $6\times6$, $7\times7$, and $9\times9$.
-For each algorithm (\texttt{forward}, \texttt{backward}, \texttt{astar}, \texttt{backtracking}, \texttt{bruteforce}),
-we record:
+
+\subsection{Experimental Environment}
 \begin{itemize}
-    \item runtime (\textbf{milliseconds}, measured by benchmark runner),
-    \item expanded nodes (\texttt{nodes\_expanded}),
-    \item solution steps (derived from trace events \texttt{set/propagate/commit}).
+    \item Language: Python 3.11
+    \item Benchmark runner: \texttt{statistic/benchmark.py}
+    \item Plot generator: \texttt{statistic/plot\_results.py}
+    \item Input set: \texttt{inputs/input-01.txt} ... \texttt{inputs/input-10.txt}
 \end{itemize}
 
-\subsection{Executed Benchmark Artifacts}
-The benchmark was executed from:
-\begin{itemize}
-    \item \texttt{python statistic/benchmark.py}
-    \item \texttt{python statistic/plot\_results.py}
-\end{itemize}
+\subsection{Test Cases}
+The 10 test files cover grid sizes $4\times4$, $5\times5$, $6\times6$, $7\times7$, and $9\times9$ with varied clue density and inequality layout.
 
-Generated files:
-\begin{itemize}
-    \item Raw CSV: \texttt{benchmark\_results.csv}
-    \item Chart images in \texttt{statistic/}: \texttt{execution\_time\_per\_testcase.png}, \texttt{nodes\_expanded\_per\_testcase.png}, \texttt{solution\_steps\_per\_testcase.png}, and overall comparison images.
-\end{itemize}
+\subsection{Experimental Results}
+\subsubsection{Raw Results per Test Case}
+\begin{warnbox}[Table placeholder]
+You can insert a custom full raw-results table here (Excel screenshot or hand-drawn table style).
+\begin{center}
+% \includegraphics[width=\textwidth]{asset/raw_results_table.png}
+\fbox{\parbox{0.92\textwidth}{\centering Placeholder: Raw results table (all algorithms x all test cases)}}
+\end{center}
+\end{warnbox}
 
-\subsection{Observed Aggregate Results}
+\subsubsection{Aggregate Statistics}
 \begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.3}
-\begin{tabularx}{\textwidth}{|l|c|c|c|c|}
+\begin{tabular}{|l|c|c|c|c|}
 \hline
 \textbf{Algorithm} & \textbf{Avg Time (ms)} & \textbf{Max Time (ms)} & \textbf{Avg Nodes} & \textbf{Avg Steps} \\
 \hline
@@ -850,97 +793,149 @@ astar & 30.954 & 221.896 & 2.2 & 48.6 \\
 backward & 222.713 & 1833.161 & 11532.9 & 9397.8 \\
 bruteforce & 1023.725 & 9137.582 & 9367.7 & 84119.6 \\
 \hline
-\end{tabularx}
-\caption{Aggregate statistics computed from \texttt{benchmark\_results.csv}.}
+\end{tabular}
+\caption{Aggregate metrics from \texttt{benchmark\_results.csv}.}
 \end{table}
 
-\subsection{Placeholders for Manual Figures/Tables}
-\begin{warnbox}[Insert your own screenshots/diagrams here]
-If you need to add custom screenshots (GUI, trace replay, architecture diagram), keep the following placeholders and replace file names later.
-\end{warnbox}
-
-\begin{figure}[H]
-  \centering
-  % Replace with your own exported chart or screenshot
-  \includegraphics[width=\textwidth]{statistic/execution_time_per_testcase.png}
-  \caption{Execution time per test case (auto-generated chart).}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  % Replace with your own exported chart or screenshot
-  \includegraphics[width=\textwidth]{statistic/nodes_expanded_per_testcase.png}
-  \caption{Nodes expanded per test case (auto-generated chart).}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  % TODO: replace with your diagram/screenshot if needed
-  % \includegraphics[width=0.9\textwidth]{asset/your_system_diagram.png}
-  \fbox{\parbox{0.9\textwidth}{\centering
-  Placeholder for custom architecture diagram / GUI screenshot / solver trace screenshot.}}
-  \caption{Custom figure placeholder (manual insertion).}
-\end{figure}
-
-\subsection{Notes}
+\subsubsection{Best Algorithm per Metric}
 \begin{itemize}
-    \item On this machine and current code version, \texttt{backtracking} and \texttt{forward} are fastest by average runtime.
-    \item \texttt{astar} keeps very low node counts but has additional overhead from state handling/propagation.
-    \item \texttt{backward} and especially \texttt{bruteforce} scale poorly on hard $9\times9$ inputs (\texttt{input-09}, \texttt{input-10}).
+    \item Best average runtime: \textbf{backtracking} (6.702 ms)
+    \item Lowest average nodes: \textbf{astar} (2.2 nodes)
+    \item Lowest average steps: \textbf{backtracking} (23.5 steps)
 \end{itemize}
 
-\begin{warnbox}[Optional manual table slot]
-If you want a fully custom table style (drawn by hand in Word/Excel), insert exported image below:
+\subsubsection{Overall Ranking by Metric}
+\begin{enumerate}
+    \item Runtime: backtracking $\rightarrow$ forward $\rightarrow$ astar $\rightarrow$ backward $\rightarrow$ bruteforce
+    \item Nodes: astar $\rightarrow$ backtracking $\rightarrow$ forward $\rightarrow$ bruteforce $\rightarrow$ backward
+    \item Scalability on hard $9\times9$: backtracking/forward $>$ astar $>$ backward $>$ bruteforce
+\end{enumerate}
+
+\subsection{Charts}
+\subsubsection{Inference Time}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{statistic/execution_time_per_testcase.png}
+  \caption{Execution time per test case (log-scale grouped bars).}
+\end{figure}
+
+\subsubsection{Expanded Nodes}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{statistic/nodes_expanded_per_testcase.png}
+  \caption{Expanded nodes per test case (log-scale grouped bars).}
+\end{figure}
+
+\subsubsection{Solution Length}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{statistic/solution_steps_per_testcase.png}
+  \caption{Solution steps per test case.}
+\end{figure}
+
+\subsubsection{Additional Overall Charts}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{statistic/overall_comparison_avg_time.png}
+  \caption{Average execution time by algorithm.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{statistic/overall_comparison_avg_nodes.png}
+  \caption{Average nodes expanded by algorithm.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{statistic/overall_comparison_avg_steps.png}
+  \caption{Average solution steps by algorithm.}
+\end{figure}
+
+\subsubsection{Memory Usage}
+\begin{warnbox}[Placeholder for memory chart]
+Current benchmark script does not export detailed memory-per-testcase values to CSV.
+If you collect memory logs separately (e.g., by profiler), insert chart here.
 \begin{center}
-% \includegraphics[width=\textwidth]{asset/benchmark_table_manual.png}
-\fbox{\parbox{0.92\textwidth}{\centering Placeholder for manual benchmark table image}}
+% \includegraphics[width=\textwidth]{asset/memory_usage_chart.png}
+\fbox{\parbox{0.92\textwidth}{\centering Placeholder: Memory usage chart}}
 \end{center}
 \end{warnbox}
 
-\begin{warnbox}[Reproducibility]
-If you re-run benchmark on another machine, update this section from the new \texttt{benchmark\_results.csv} before final submission.
+\subsubsection{Success Rate}
+\begin{warnbox}[Placeholder for success-rate chart]
+Current benchmark CSV focuses on runtime / nodes / steps.  
+If you export solved-failed flags per testcase, insert success-rate chart here.
+\begin{center}
+% \includegraphics[width=\textwidth]{asset/success_rate_chart.png}
+\fbox{\parbox{0.92\textwidth}{\centering Placeholder: Success-rate chart}}
+\end{center}
 \end{warnbox}
 
-% ================================================================
-%            SECTION 7: DISCUSSION AND CONCLUSION
-% ================================================================
-\section{Discussion and Conclusion}
+\subsubsection{Manual Figure Slots (for your own screenshots)}
+\begin{warnbox}[Insert custom screenshots]
+\begin{center}
+% \includegraphics[width=\textwidth]{asset/gui_screenshot.png}
+\fbox{\parbox{0.92\textwidth}{\centering Placeholder: GUI screenshot}}
+\end{center}
+\begin{center}
+% \includegraphics[width=\textwidth]{asset/trace_screenshot.png}
+\fbox{\parbox{0.92\textwidth}{\centering Placeholder: step-by-step trace screenshot}}
+\end{center}
+\end{warnbox}
 
-\subsection{Discussion by Implementation Characteristics}
+\subsection{Insights and Discussion}
 \begin{itemize}
-    \item \textbf{Forward chaining:} AC-3 + singleton propagation first, then fallback backtracking when needed.
-    \item \textbf{Backward chaining:} depth-first goal reduction over cell assignments (SLD-like strategy).
-    \item \textbf{A*:} uses admissible $h=0$ with propagated domains; wrapper validates output and falls back if needed.
-    \item \textbf{Backtracking:} DFS with consistency checks and AC-3 pruning.
-    \item \textbf{Brute-force:} DFS baseline without informed pruning.
+    \item \texttt{backtracking} is the fastest on average in this benchmark setting.
+    \item \texttt{astar} keeps very low node expansions, but runtime overhead is higher than backtracking.
+    \item \texttt{backward} and \texttt{bruteforce} grow sharply on hard inputs (\texttt{input-09}, \texttt{input-10}).
 \end{itemize}
 
-\subsection{Summary}
+\subsection{Strengths and Weaknesses of Each Algorithm}
+\begin{itemize}
+    \item \textbf{Forward}: strong propagation; may need fallback for completion.
+    \item \textbf{Backward}: conceptually clear SLD reasoning; expensive deep recursion.
+    \item \textbf{A*}: controlled frontier search; current $h=0$ is admissible but weak.
+    \item \textbf{Backtracking}: strong practical baseline with pruning.
+    \item \textbf{Bruteforce}: simplest baseline, poorest scalability.
+\end{itemize}
+
+\subsection{Comparative Evaluation}
+From measured results, the most practical pair for this project version is \texttt{backtracking} and \texttt{forward}.
+\texttt{astar} is still useful when prioritizing low expansion count and search-space control.
+For pedagogical comparison, \texttt{backward} and \texttt{bruteforce} clearly show the cost of weak pruning.
+
+% ================================================================
+%            SECTION 7: SELF-EVALUATION
+% ================================================================
+\section{Self-evaluation Against Project Criteria}
 
 \begin{table}[H]
 \centering
-\renewcommand{\arraystretch}{1.4}
-\begin{tabularx}{\textwidth}{|l|X|X|}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{|c|X|c|}
 \hline
-\textbf{Algorithm} & \textbf{Current implementation role} & \textbf{Notes} \\
+\textbf{No.} & \textbf{Criterion (Project 2)} & \textbf{Status} \\
 \hline
-Forward Chaining & Constraint propagation solver & Falls back to backtracking if unresolved \\
-Backward Chaining & SLD-like DFS solver & Goal-driven recursive assignment \\
-A* & Informed search path & Uses $h=0$, with validity check + fallback \\
-Backtracking & Core exact fallback solver & AC-3 assisted DFS \\
-Brute-Force & Baseline comparison solver & Minimal pruning baseline \\
+1 & FOL formalization and CNF derivation (including representative step-by-step clauses). & Completed \\
+\hline
+2 & Automatic grounded KB/CNF generation for generic size $N$. & Completed \\
+\hline
+3 & Forward chaining implementation and valid solving behavior. & Completed \\
+\hline
+4 & Backward chaining (SLD-style) implementation. & Completed \\
+\hline
+5 & A* implementation with justified admissible heuristic ($h=0$ in current version). & Completed \\
+\hline
+6 & Brute-force and backtracking baselines for comparison. & Completed \\
+\hline
+7 & Experiments on 10 official test cases with timing/expansion charts and analysis. & Completed \\
+\hline
+8 & GUI demonstration and end-to-end solving workflow. & Completed \\
 \hline
 \end{tabularx}
-\caption{Algorithm summary aligned with current codebase behavior.}
+\caption{Self-evaluation summary aligned with the official Project 2 rubric.}
 \end{table}
-
-\subsection{Conclusion}
-The current project provides a GUI-first Futoshiki solver system with five algorithms,
-trace replay, and output export. The report now matches the implemented architecture:
-core CSP utilities in \texttt{futoshiki\_core.py}, algorithm modules in \texttt{source/algorithm/},
-and GUI entrypoint at \texttt{source/main.py}. Quantitative benchmark results in this report
-are generated from the new \texttt{statistic/benchmark.py} and \texttt{statistic/plot\_results.py}
-pipeline and can be refreshed by re-running those scripts.
 
 % ================================================================
 %            SECTION 8: REFERENCES
