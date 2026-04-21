@@ -759,25 +759,181 @@ BRUTE_FORCE(cells, assignment):
 \section{Experiments and Evaluation}
 
 \subsection{Experimental Environment}
-\begin{itemize}
-    \item Language: Python 3.11
-    \item Benchmark runner: \texttt{statistic/benchmark.py}
-    \item Plot generator: \texttt{statistic/plot\_results.py}
-    \item Input set: \texttt{inputs/input-01.txt} ... \texttt{inputs/input-10.txt}
-\end{itemize}
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Language & Python 3.11 \\
+\hline
+Operating System & Windows (win32 10.0.26200) \\
+\hline
+RAM & \textit{(Fill your machine spec)} \\
+\hline
+GUI Stack & React (Vite) + Electron wrapper + FastAPI backend \\
+\hline
+Data Structures & heapq, deque, dict/set, domain map (CSP) \\
+\hline
+\end{tabular}
+\caption{Experimental environment configuration}
+\end{table}
 
 \subsection{Test Cases}
-The 10 test files cover grid sizes $4\times4$, $5\times5$, $6\times6$, $7\times7$, and $9\times9$ with varied clue density and inequality layout.
+The benchmark uses all 10 official test files (\texttt{input-01} to \texttt{input-10}).
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{asset/tc1.png}
+    \caption*{TC1}
+\end{minipage}
+\hspace{0.02\textwidth}
+\begin{minipage}{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{asset/tc2.png}
+    \caption*{TC2}
+\end{minipage}
+\hspace{0.02\textwidth}
+\begin{minipage}{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{asset/tc3.png}
+    \caption*{TC3}
+\end{minipage}
+\vspace{0.6em}
+
+\begin{minipage}{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{asset/tc4.png}
+    \caption*{TC4}
+\end{minipage}
+\hspace{0.02\textwidth}
+\begin{minipage}{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{asset/tc5.png}
+    \caption*{TC5}
+\end{minipage}
+\hspace{0.02\textwidth}
+\begin{minipage}{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{asset/tc6.png}
+    \caption*{TC6}
+\end{minipage}
+\vspace{0.6em}
+
+\begin{minipage}{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{asset/tc7.png}
+    \caption*{TC7}
+\end{minipage}
+\hspace{0.02\textwidth}
+\begin{minipage}{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{asset/tc8.png}
+    \caption*{TC8}
+\end{minipage}
+\hspace{0.02\textwidth}
+\begin{minipage}{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{asset/tc9.png}
+    \caption*{TC9}
+\end{minipage}
+\vspace{0.6em}
+
+\begin{minipage}{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{asset/tc10.png}
+    \caption*{TC10}
+\end{minipage}
+
+\caption{GUI screenshots for test cases TC1 to TC10}
+\end{figure}
 
 \subsection{Experimental Results}
 \subsubsection{Raw Results per Test Case}
-\begin{warnbox}[Table placeholder]
-You can insert a custom full raw-results table here (Excel screenshot or hand-drawn table style).
-\begin{center}
-% \includegraphics[width=\textwidth]{asset/raw_results_table.png}
-\fbox{\parbox{0.92\textwidth}{\centering Placeholder: Raw results table (all algorithms x all test cases)}}
-\end{center}
-\end{warnbox}
+\begin{table}[H]
+\centering
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{|l|l|r|r|r|}
+\hline
+\textbf{Test Case} & \textbf{Algorithm} & \textbf{Time (ms)} & \textbf{Expanded Nodes} & \textbf{Solution Length} \\
+\hline
+\multirow{5}{*}{input-01}
+& forward      & 2.074    & 3      & 12 \\
+& backward     & 0.177    & 17     & 22 \\
+& astar        & 0.575    & 1      & 15 \\
+& backtracking & 1.419    & 2      & 5  \\
+& bruteforce   & 0.629    & 12     & 36 \\
+\hline
+\multirow{5}{*}{input-02}
+& forward      & 1.399    & 3      & 12 \\
+& backward     & 0.324    & 26     & 27 \\
+& astar        & 2.469    & 2      & 14 \\
+& backtracking & 0.738    & 2      & 8  \\
+& bruteforce   & 0.390    & 17     & 53 \\
+\hline
+\multirow{5}{*}{input-03}
+& forward      & 3.965    & 3      & 18 \\
+& backward     & 0.894    & 33     & 39 \\
+& astar        & 6.479    & 2      & 25 \\
+& backtracking & 3.392    & 2      & 9  \\
+& bruteforce   & 1.474    & 23     & 85 \\
+\hline
+\multirow{5}{*}{input-04}
+& forward      & 3.532    & 3      & 19 \\
+& backward     & 0.545    & 26     & 36 \\
+& astar        & 3.866    & 2      & 35 \\
+& backtracking & 5.542    & 2      & 18 \\
+& bruteforce   & 0.694    & 19     & 82 \\
+\hline
+\multirow{5}{*}{input-05}
+& forward      & 5.649    & 3      & 28 \\
+& backward     & 1.178    & 77     & 89 \\
+& astar        & 4.269    & 1      & 46 \\
+& backtracking & 3.557    & 2      & 20 \\
+& bruteforce   & 3.335    & 63     & 330 \\
+\hline
+\multirow{5}{*}{input-06}
+& forward      & 5.769    & 4      & 29 \\
+& backward     & 1.725    & 88     & 98 \\
+& astar        & 13.961   & 3      & 41 \\
+& backtracking & 5.252    & 3      & 25 \\
+& bruteforce   & 4.220    & 72     & 377 \\
+\hline
+\multirow{5}{*}{input-07}
+& forward      & 9.123    & 4      & 40 \\
+& backward     & 1.241    & 105    & 128 \\
+& astar        & 18.870   & 3      & 54 \\
+& backtracking & 5.224    & 3      & 28 \\
+& bruteforce   & 3.505    & 91     & 561 \\
+\hline
+\multirow{5}{*}{input-08}
+& forward      & 5.838    & 3      & 39 \\
+& backward     & 2.325    & 153    & 166 \\
+& astar        & 4.843    & 1      & 62 \\
+& backtracking & 3.113    & 2      & 25 \\
+& bruteforce   & 16.039   & 129    & 812 \\
+\hline
+\multirow{5}{*}{input-09}
+& forward      & 32.985   & 4      & 63 \\
+& backward     & 385.560  & 13449  & 8672 \\
+& astar        & 32.313   & 2      & 100 \\
+& backtracking & 11.514   & 3      & 52 \\
+& bruteforce   & 1069.378 & 8612   & 77306 \\
+\hline
+\multirow{5}{*}{input-10}
+& forward      & 20.233   & 5      & 66 \\
+& backward     & 1833.161 & 101355 & 84701 \\
+& astar        & 221.896  & 5      & 94 \\
+& backtracking & 27.270   & 4      & 45 \\
+& bruteforce   & 9137.582 & 84639  & 761554 \\
+\hline
+\end{tabular}
+\caption{Full experimental results from \texttt{statistic/benchmark\_results.csv}}
+\end{table}
 
 \subsubsection{Aggregate Statistics}
 \begin{table}[H]
@@ -797,113 +953,125 @@ bruteforce & 1023.725 & 9137.582 & 9367.7 & 84119.6 \\
 \caption{Aggregate metrics from \texttt{benchmark\_results.csv}.}
 \end{table}
 
-\subsubsection{Best Algorithm per Metric}
-\begin{itemize}
-    \item Best average runtime: \textbf{backtracking} (6.702 ms)
-    \item Lowest average nodes: \textbf{astar} (2.2 nodes)
-    \item Lowest average steps: \textbf{backtracking} (23.5 steps)
-\end{itemize}
+\subsubsection{Best Algorithm per Test Case}
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Test Case} & \textbf{Fastest (Time)} & \textbf{Fewest Nodes} & \textbf{Least Memory} \\
+\hline
+input-01 & backward & astar & N/A \\
+input-02 & backward & astar / backtracking & N/A \\
+input-03 & backward & astar / backtracking & N/A \\
+input-04 & backward & astar / backtracking & N/A \\
+input-05 & backward & astar & N/A \\
+input-06 & backward & astar / backtracking & N/A \\
+input-07 & backward & astar / backtracking & N/A \\
+input-08 & backward & astar & N/A \\
+input-09 & backtracking & astar & N/A \\
+input-10 & forward & backtracking & N/A \\
+\hline
+\end{tabular}
+\caption{Best-performing algorithm per test case and metric}
+\end{table}
 
 \subsubsection{Overall Ranking by Metric}
-\begin{enumerate}
-    \item Runtime: backtracking $\rightarrow$ forward $\rightarrow$ astar $\rightarrow$ backward $\rightarrow$ bruteforce
-    \item Nodes: astar $\rightarrow$ backtracking $\rightarrow$ forward $\rightarrow$ bruteforce $\rightarrow$ backward
-    \item Scalability on hard $9\times9$: backtracking/forward $>$ astar $>$ backward $>$ bruteforce
-\end{enumerate}
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|l|l|l|l|l|}
+\hline
+\textbf{Rank} & \textbf{Search Time} & \textbf{Memory} & \textbf{Expanded Nodes} & \textbf{Solution Length} & \textbf{Success Rate} \\
+\hline
+1st & backtracking (6.702 ms) & N/A & astar (2.2) & backtracking (23.5) & all (100\%) \\
+2nd & forward (9.057 ms) & N/A & backtracking (2.5) & forward (32.6) & -- \\
+3rd & astar (30.954 ms) & N/A & forward (3.5) & astar (48.6) & -- \\
+4th & backward (222.713 ms) & N/A & bruteforce (9367.7) & backward (9397.8) & -- \\
+5th & bruteforce (1023.725 ms) & N/A & backward (11532.9) & bruteforce (84119.6) & -- \\
+\hline
+\end{tabular}
+\caption{Overall algorithm ranking across metrics}
+\end{table}
 
 \subsection{Charts}
-\subsubsection{Inference Time}
+
+\subsubsection{Execution Time per Test Case}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{statistic/execution_time_per_testcase.png}
-  \caption{Execution time per test case (log-scale grouped bars).}
+  \caption{Execution time per test case (grouped bar, log scale).}
 \end{figure}
+\textbf{Analysis:}
+The runtime chart shows clear divergence on hard instances (\texttt{input-09}, \texttt{input-10}).  
+\texttt{backtracking} and \texttt{forward} remain comparatively stable, while \texttt{backward} and especially \texttt{bruteforce} increase sharply.  
+\texttt{astar} stays moderate on easy/medium inputs but rises on the largest case due to frontier-management overhead.
 
-\subsubsection{Expanded Nodes}
+\subsubsection{Nodes Expanded per Test Case}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{statistic/nodes_expanded_per_testcase.png}
-  \caption{Expanded nodes per test case (log-scale grouped bars).}
+  \caption{Nodes expanded per test case (grouped bar, log scale).}
 \end{figure}
+\textbf{Analysis:}
+\texttt{astar} and \texttt{backtracking} consistently expand very few nodes, indicating stronger effective pruning on this benchmark set.  
+\texttt{backward} and \texttt{bruteforce} expand orders of magnitude more nodes on hard cases, which explains their runtime degradation.  
+\texttt{forward} remains low because it relies heavily on propagation before branching.
 
-\subsubsection{Solution Length}
+\subsubsection{Solution Steps per Test Case}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{statistic/solution_steps_per_testcase.png}
-  \caption{Solution steps per test case.}
+  \caption{Solution steps per test case (grouped bar).}
 \end{figure}
+\textbf{Analysis:}
+For easy/medium instances, all methods stay in a relatively compact step range.  
+On \texttt{input-09} and \texttt{input-10}, \texttt{bruteforce} and \texttt{backward} produce dramatically larger step counts, reflecting long ineffective search traces.  
+\texttt{backtracking} and \texttt{forward} remain far more concise in constructive steps.
 
-\subsubsection{Additional Overall Charts}
+\subsubsection{Average Execution Time}
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{statistic/overall_comparison_avg_time.png}
-  \caption{Average execution time by algorithm.}
+  \includegraphics[width=0.88\textwidth]{statistic/overall_comparison_avg_time.png}
+  \caption{Average execution time by algorithm (log scale).}
 \end{figure}
+\textbf{Analysis:}
+Average runtime confirms the table ranking: \texttt{backtracking} is best overall, followed by \texttt{forward}.  
+\texttt{backward} is significantly slower, and \texttt{bruteforce} is the worst by a large margin.  
+This indicates that uninformed/deep search behaviors dominate cost when puzzle difficulty grows.
 
+\subsubsection{Average Nodes Expanded}
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{statistic/overall_comparison_avg_nodes.png}
-  \caption{Average nodes expanded by algorithm.}
+  \includegraphics[width=0.88\textwidth]{statistic/overall_comparison_avg_nodes.png}
+  \caption{Average nodes expanded by algorithm (log scale).}
 \end{figure}
+\textbf{Analysis:}
+Average-node results highlight search efficiency: \texttt{astar} has the fewest expansions, closely followed by \texttt{backtracking}.  
+\texttt{forward} is still low, while \texttt{backward} and \texttt{bruteforce} are much higher.  
+This reinforces that node control, not only implementation speed, is a key driver for scalability.
 
+\subsubsection{Average Solution Steps}
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{statistic/overall_comparison_avg_steps.png}
-  \caption{Average solution steps by algorithm.}
+  \includegraphics[width=0.88\textwidth]{statistic/overall_comparison_avg_steps.png}
+  \caption{Average solution steps by algorithm (linear scale).}
 \end{figure}
+\textbf{Analysis:}
+Average step counts separate practical solvers from baseline-style exhaustive behavior.  
+\texttt{backtracking} and \texttt{forward} require relatively short traces, while \texttt{backward} is much longer and \texttt{bruteforce} is extremely large.  
+This metric complements runtime by showing how much search work each method performs internally.
 
-\subsubsection{Memory Usage}
-\begin{warnbox}[Placeholder for memory chart]
-Current benchmark script does not export detailed memory-per-testcase values to CSV.
-If you collect memory logs separately (e.g., by profiler), insert chart here.
-\begin{center}
-% \includegraphics[width=\textwidth]{asset/memory_usage_chart.png}
-\fbox{\parbox{0.92\textwidth}{\centering Placeholder: Memory usage chart}}
-\end{center}
-\end{warnbox}
-
-\subsubsection{Success Rate}
-\begin{warnbox}[Placeholder for success-rate chart]
-Current benchmark CSV focuses on runtime / nodes / steps.  
-If you export solved-failed flags per testcase, insert success-rate chart here.
-\begin{center}
-% \includegraphics[width=\textwidth]{asset/success_rate_chart.png}
-\fbox{\parbox{0.92\textwidth}{\centering Placeholder: Success-rate chart}}
-\end{center}
-\end{warnbox}
-
-\subsubsection{Manual Figure Slots (for your own screenshots)}
-\begin{warnbox}[Insert custom screenshots]
-\begin{center}
-% \includegraphics[width=\textwidth]{asset/gui_screenshot.png}
-\fbox{\parbox{0.92\textwidth}{\centering Placeholder: GUI screenshot}}
-\end{center}
-\begin{center}
-% \includegraphics[width=\textwidth]{asset/trace_screenshot.png}
-\fbox{\parbox{0.92\textwidth}{\centering Placeholder: step-by-step trace screenshot}}
-\end{center}
-\end{warnbox}
-
-\subsection{Insights and Discussion}
-\begin{itemize}
-    \item \texttt{backtracking} is the fastest on average in this benchmark setting.
-    \item \texttt{astar} keeps very low node expansions, but runtime overhead is higher than backtracking.
-    \item \texttt{backward} and \texttt{bruteforce} grow sharply on hard inputs (\texttt{input-09}, \texttt{input-10}).
-\end{itemize}
-
-\subsection{Strengths and Weaknesses of Each Algorithm}
-\begin{itemize}
-    \item \textbf{Forward}: strong propagation; may need fallback for completion.
-    \item \textbf{Backward}: conceptually clear SLD reasoning; expensive deep recursion.
-    \item \textbf{A*}: controlled frontier search; current $h=0$ is admissible but weak.
-    \item \textbf{Backtracking}: strong practical baseline with pruning.
-    \item \textbf{Bruteforce}: simplest baseline, poorest scalability.
-\end{itemize}
-
-\subsection{Comparative Evaluation}
-From measured results, the most practical pair for this project version is \texttt{backtracking} and \texttt{forward}.
-\texttt{astar} is still useful when prioritizing low expansion count and search-space control.
-For pedagogical comparison, \texttt{backward} and \texttt{bruteforce} clearly show the cost of weak pruning.
+\subsubsection{Overall Comparison (Combined Averages)}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{statistic/overall_comparison_comparison.png}
+  \caption{Combined comparison of average time, nodes, and steps (log scale).}
+\end{figure}
+\textbf{Analysis:}
+The combined chart summarizes trade-offs across the three core metrics in one view.  
+\texttt{backtracking} and \texttt{forward} provide the most balanced performance profile for this Project 2 dataset.  
+\texttt{astar} excels in node minimization but does not always translate that into the best runtime, while \texttt{backward} and \texttt{bruteforce} are dominated on hard cases.
 
 % ================================================================
 %            SECTION 7: SELF-EVALUATION
