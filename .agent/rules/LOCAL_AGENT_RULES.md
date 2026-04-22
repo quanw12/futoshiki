@@ -9,6 +9,8 @@ These rules apply to all tasks executed through this repository-local harness.
 3. Validate after changes (lint/test/build when applicable).
 4. Report assumptions and blockers explicitly.
 5. Before starting any task, read `.agent/skills/karpathy-guidelines/SKILL.md`.
+6. Before any algorithm-related activity, read `AI - Project 2.pdf` first and align implementation/analysis with its rubric.
+   - Applies to: A* heuristic design, forward/backward chaining behavior, brute-force/backtracking comparison, testcase design, benchmark metrics, and output validation.
 
 ## Tooling rules
 

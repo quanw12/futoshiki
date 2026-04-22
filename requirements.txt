@@ -5,3 +5,8 @@ PySide6
 # Plotting (benchmark charts).
 matplotlib
 numpy
+
+# API backend for Electron/React UI.
+# Keep these pinned to avoid FastAPI/Starlette incompatibilities.
+fastapi==0.115.12
+uvicorn[standard]==0.30.6

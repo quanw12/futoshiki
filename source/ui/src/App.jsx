@@ -33,7 +33,7 @@ export default function App() {
   const [metrics, setMetrics] = useState({
     runtime: "—",
     nodes: "—",
-    valid: "In progress",
+    memory: "—",
     steps: "—",
     solutionSteps: "—"
   });
@@ -150,7 +150,7 @@ export default function App() {
       setSolvedGrid(null);
       setTrace([]);
       setSourceName(parseName(nameHint));
-      setMetrics({ runtime: "—", nodes: "—", valid: "In progress", steps: "—", solutionSteps: "—" });
+      setMetrics({ runtime: "—", nodes: "—", memory: "—", steps: "—", solutionSteps: "—" });
       setLog([`✦ Loaded n=${data.puzzle.n} (${parseName(nameHint)})`]);
       setSelected(null);
       wasSolvedRef.current = false;
@@ -184,6 +184,12 @@ export default function App() {
   const runSolve = async () => {
     if (!puzzle) return;
     setLoading(true);
+    // Prevent stale success state from previous runs.
+    setSolvedGrid(null);
+    setTrace([]);
+    setReplayIndex(0);
+    setIsReplaying(false);
+    setGrid(cloneGrid(puzzle.grid));
     try {
       appendLog(`⚙ Running: ${algo} ...`);
       const res = await fetch(`${API_BASE}/api/solve`, {
@@ -204,7 +210,7 @@ export default function App() {
       setMetrics({
         runtime: `${(data.runtime_sec || 0).toFixed(4)}s`,
         nodes: `${data.nodes_expanded ?? "—"}`,
-        valid: data.solved_grid && !data.contradiction ? "✓ YES" : "✗ NO",
+        memory: `${Math.round((data.memory_kb ?? 0) * 1024)} B`,
         steps: `${replayActions.length || (data.trace || []).length || 0}`,
         solutionSteps: `${(data.trace || []).length || 0}`
       });
@@ -426,9 +432,9 @@ export default function App() {
           <div className="metrics">
             <Stat label="Execution Time" value={metrics.runtime} />
             <Stat label="Nodes Expanded" value={metrics.nodes} />
+            <Stat label="Memory Usage" value={metrics.memory} />
             <Stat label="Solution Steps" value={metrics.solutionSteps} />
             <Stat label="Trace Steps" value={metrics.steps} />
-            <Stat label="Solution Valid" value={metrics.valid} />
           </div>
 
           <h3>Trace / Logs</h3>

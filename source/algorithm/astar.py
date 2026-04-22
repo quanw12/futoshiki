@@ -6,7 +6,16 @@ import heapq
 import time
 from typing import Dict, Optional, Set
 
-from futoshiki_core import Cell, Puzzle, SolveResult, TraceEvent, assignment_to_grid, build_domains_from_partial
+from futoshiki_core import (
+    Cell,
+    Puzzle,
+    SolveResult,
+    TraceEvent,
+    assignment_to_grid,
+    build_domains_from_partial,
+    consistent_partial,
+    is_valid_solution,
+)
 
 State = frozenset  # frozenset[Tuple[Cell, int]]
 
@@ -61,7 +70,19 @@ def _mrv_tiebreak(dom: Dict[Cell, Set[int]]) -> int:
     return best_sz
 
 
+def _assignment_consistent(p: Puzzle, asg: Dict[Cell, int]) -> bool:
+    """Validate pairwise row/col/inequality consistency for full/partial assignments."""
+    for c, v in asg.items():
+        other = dict(asg)
+        other.pop(c, None)
+        if not consistent_partial(p, other, c, v):
+            return False
+    return True
+
+
 def astar_solver(p: Puzzle) -> SolveResult:
+    # Official comparison mode uses an explicitly admissible heuristic.
+    # h(s)=0 is a safe lower bound on remaining branch decisions.
     t0 = time.perf_counter()
     start_asg: Dict[Cell, int] = {}
     for i in range(p.n):
@@ -75,17 +96,22 @@ def astar_solver(p: Puzzle) -> SolveResult:
         return SolveResult(None, time.perf_counter() - t0, 0, 0.0, True, trace=trace)
     full0 = _extend_with_singleton_domains(start_asg, d0)
     assert full0 is not None
+    if not _assignment_consistent(p, full0):
+        return SolveResult(None, time.perf_counter() - t0, 0, 0.0, True, trace=trace)
     _trace_new_assignments(trace, start_asg, full0, "propagate")
     goal_n = p.n * p.n
     if _domain_uncertain(d0) == 0 and len(full0) == goal_n:
-        _trace_new_assignments(trace, start_asg, full0, "commit")
-        return SolveResult(assignment_to_grid(p, full0), time.perf_counter() - t0, 1, 0.5, False, trace=trace)
+        g0 = assignment_to_grid(p, full0)
+        if is_valid_solution(p, g0):
+            _trace_new_assignments(trace, start_asg, full0, "commit")
+            return SolveResult(g0, time.perf_counter() - t0, 1, 0.5, False, trace=trace)
+        return SolveResult(None, time.perf_counter() - t0, 1, 0.5, True, trace=trace)
     start: State = frozenset(full0.items())
 
     pq: list[tuple] = []
     seq = 0
     g0 = 0
-    h0 = _domain_uncertain(d0)
+    h0 = 0
     heapq.heappush(pq, (g0 + h0, _mrv_tiebreak(d0), h0, seq, g0, start))
     best_g: Dict[State, int] = {start: 0}
     best_goal_g: Optional[int] = None
@@ -104,15 +130,23 @@ def astar_solver(p: Puzzle) -> SolveResult:
         full = _extend_with_singleton_domains(asg, dom)
         if full is None:
             continue
+        if not _assignment_consistent(p, full):
+            continue
         _trace_new_assignments(trace, asg, full, "propagate")
         if _domain_uncertain(dom) == 0 and len(full) == goal_n:
-            _trace_new_assignments(trace, asg, full, "commit")
-            best_goal_g = g
-            return SolveResult(assignment_to_grid(p, full), time.perf_counter() - t0, expanded, expanded * 0.5, False, trace=trace)
+            solved = assignment_to_grid(p, full)
+            if is_valid_solution(p, solved):
+                _trace_new_assignments(trace, asg, full, "commit")
+                best_goal_g = g
+                return SolveResult(solved, time.perf_counter() - t0, expanded, expanded * 0.5, False, trace=trace)
+            continue
         cell = _mrv_branch_cell(p, dom)
         if cell is None:
             continue
         for v in sorted(dom[cell]):
+            if not consistent_partial(p, full, cell, v):
+                trace.append(("reject", cell[0], cell[1], v))
+                continue
             child = dict(full)
             child[cell] = v
             trace.append(("set", cell[0], cell[1], v))
@@ -124,6 +158,9 @@ def astar_solver(p: Puzzle) -> SolveResult:
             if full2 is None:
                 trace.append(("reject", cell[0], cell[1], v))
                 continue
+            if not _assignment_consistent(p, full2):
+                trace.append(("reject", cell[0], cell[1], v))
+                continue
             _trace_new_assignments(trace, child, full2, "propagate")
             ns = frozenset(full2.items())
             ng = g + 1
@@ -133,7 +170,7 @@ def astar_solver(p: Puzzle) -> SolveResult:
                 continue
             best_g[ns] = ng
             seq += 1
-            hn = _domain_uncertain(dom2)
+            hn = 0
             heapq.heappush(pq, (ng + hn, _mrv_tiebreak(dom2), hn, seq, ng, ns))
 
     return SolveResult(None, time.perf_counter() - t0, expanded, expanded * 0.5, True, trace=trace)

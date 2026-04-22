@@ -14,15 +14,35 @@ def backward_chaining_solver(p: Puzzle) -> SolveResult:
     nodes = 0
     trace: list[TraceEvent] = []
 
+    def pick_next_goal(asg: Dict[Cell, int]) -> tuple[Optional[Cell], Optional[list[int]]]:
+        best_cell: Optional[Cell] = None
+        best_cands: Optional[list[int]] = None
+        best_len = 10**9
+        for c in order:
+            if c in asg:
+                continue
+            cands = cell_candidates(p, asg, c)
+            if len(cands) == 0:
+                return c, []
+            if len(cands) < best_len:
+                best_len = len(cands)
+                best_cell = c
+                best_cands = cands
+                if best_len == 1:
+                    break
+        return best_cell, best_cands
+
     def sld(k: int, asg: Dict[Cell, int]) -> Optional[Dict[Cell, int]]:
         nonlocal nodes
         nodes += 1
         if k == len(order):
             return asg
-        c = order[k]
-        if c in asg:
-            return sld(k + 1, asg)
-        for v in cell_candidates(p, asg, c):
+        c, cands = pick_next_goal(asg)
+        if c is None:
+            return asg
+        if cands is None or len(cands) == 0:
+            return None
+        for v in cands:
             trace.append(("set", c[0], c[1], v))
             na = dict(asg)
             na[c] = v

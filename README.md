@@ -13,6 +13,9 @@ BTVN/
       backward.py
       bruteforce.py
       forward.py
+    benchmark_compare.py
+    ground_kb.py
+    validate_outputs.py
     ui/
       src/
       electron/
@@ -30,6 +33,36 @@ BTVN/
 ```
 
 ## Run
+
+### Pure benchmark workflow (comparison-first)
+
+Use this flow to compare algorithms fairly (pure runs, no hidden fallback in orchestration):
+
+```bash
+python source/benchmark_compare.py
+python source/validate_outputs.py
+```
+
+Benchmark behavior:
+- Uses `inputs/input-01..10.txt` (sizes `4,4,5,5,6,6,7,7,9,9`)
+- Runs `forward`, `backward`, `astar`, `backtracking`, `bruteforce` independently
+- Writes per-algorithm outputs to `outputs/<algo>-output-XX.txt`
+- Writes canonical required files to `outputs/output-XX.txt` from pure backtracking results
+- Writes comparison metrics to `outputs/benchmark-summary.json`
+
+### Ground KB + CNF generation (DIMACS)
+
+Generate grounded CNF from any input file:
+
+```bash
+python source/ground_kb.py inputs/input-01.txt outputs/puzzle-01.dimacs
+python source/ground_kb.py inputs/input-01.txt outputs/tmp-01.cnf
+```
+
+This provides:
+- grounded `Val(i,j,v)` propositional atoms
+- CNF clauses for domain/uniqueness/given/inequality constraints
+- DIMACS output for SAT/resolution verification
 
 ### New JS Liquid UI (recommended)
 
@@ -76,5 +109,9 @@ Supported algorithms:
 - `astar`
 - `backtracking`
 - `bruteforce`
+
+Notes on modes:
+- Official comparison mode is pure (no cross-algorithm fallback in dispatcher).
+- If you want hybrid behavior for experimentation, keep it as a separate explicit path, not the benchmark default.
 
 The legacy Qt/Tk UIs were removed; the JS UI is the only UI in this repo.

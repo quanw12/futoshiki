@@ -347,16 +347,6 @@ def solve(p: Puzzle, algo: str) -> SolveResult:
         r = backward_chaining_solver_impl(p)
     elif algo == "astar":
         r = astar_solver_impl(p)
-        astar_invalid = r.solved_grid is not None and (not r.contradiction) and (not is_valid_solution(p, r.solved_grid))
-        if r.solved_grid is None or r.contradiction or astar_invalid:
-            fb = backtracking_solver_impl(p, brute_force=False)
-            fb.messages.extend(
-                [
-                    "A* exhausted without full solution on this testcase.",
-                    "Fallback: Backtracking + AC-3 used to complete the solve.",
-                ]
-            )
-            r = fb
     elif algo == "bruteforce":
         r = bruteforce_solver_impl(p)
     elif algo == "backtracking":

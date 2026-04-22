@@ -14,7 +14,7 @@ from typing import Iterable, List, Sequence
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(_REPO_ROOT, "source"))
 
-from futoshiki_core import Puzzle, read_input  # noqa: E402
+from futoshiki_core import Puzzle, is_valid_solution, read_input  # noqa: E402
 from solvers import solve  # noqa: E402
 
 
@@ -25,6 +25,9 @@ class BenchmarkRow:
     solution_steps: int
     execution_time_ms: float
     nodes_expanded: int
+    memory_usage_bytes: int
+    status: str
+    failed_reason: str
 
 
 def _clone_puzzle(p: Puzzle) -> Puzzle:
@@ -80,6 +83,18 @@ def run_benchmark(
             t0 = time.perf_counter_ns()
             r = solve(p, algo)
             t1 = time.perf_counter_ns()
+            valid = bool(r.solved_grid) and (not r.contradiction) and is_valid_solution(p, r.solved_grid)
+            if valid:
+                status = "success"
+                failed_reason = ""
+            else:
+                status = "failed"
+                if r.contradiction:
+                    failed_reason = "contradiction"
+                elif r.solved_grid is None:
+                    failed_reason = "exhausted_unsolved"
+                else:
+                    failed_reason = "invalid_solution"
             rows.append(
                 BenchmarkRow(
                     algorithm_name=algo,
@@ -87,6 +102,9 @@ def run_benchmark(
                     solution_steps=_solution_steps_from_trace(r.trace),
                     execution_time_ms=(t1 - t0) / 1_000_000.0,
                     nodes_expanded=int(r.nodes_expanded),
+                    memory_usage_bytes=int(round((r.memory_kb or 0.0) * 1024.0)),
+                    status=status,
+                    failed_reason=failed_reason,
                 )
             )
     return rows
@@ -95,7 +113,18 @@ def run_benchmark(
 def export_csv(rows: Sequence[BenchmarkRow], out_path: str) -> None:
     with open(out_path, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["Algorithm", "TestCase", "SolutionSteps", "ExecutionTime(ms)", "NodesExpanded"])
+        w.writerow(
+            [
+                "Algorithm",
+                "TestCase",
+                "SolutionSteps",
+                "ExecutionTime(ms)",
+                "NodesExpanded",
+                "MemoryUsage(bytes)",
+                "Status",
+                "FailedReason",
+            ]
+        )
         for r in rows:
             w.writerow(
                 [
@@ -104,6 +133,9 @@ def export_csv(rows: Sequence[BenchmarkRow], out_path: str) -> None:
                     r.solution_steps,
                     f"{r.execution_time_ms:.3f}",
                     r.nodes_expanded,
+                    r.memory_usage_bytes,
+                    r.status,
+                    r.failed_reason,
                 ]
             )
 
