@@ -70,6 +70,21 @@ def _mrv_tiebreak(dom: Dict[Cell, Set[int]]) -> int:
     return best_sz
 
 
+def _admissible_h(uncertain_count: int, assigned_count: int, goal_n: int) -> int:
+    """
+    Admissible/consistent heuristic:
+    - 0 at goal
+    - 1 for any non-goal state
+
+    Under our cost model (one branching decision costs 1), every non-goal
+    state requires at least one additional decision to reach a complete
+    assignment, so h=1 is a safe lower bound and not identically zero.
+    """
+    if uncertain_count == 0 and assigned_count == goal_n:
+        return 0
+    return 1
+
+
 def _assignment_consistent(p: Puzzle, asg: Dict[Cell, int]) -> bool:
     """Validate pairwise row/col/inequality consistency for full/partial assignments."""
     for c, v in asg.items():
@@ -111,7 +126,7 @@ def astar_solver(p: Puzzle) -> SolveResult:
     pq: list[tuple] = []
     seq = 0
     g0 = 0
-    h0 = 0
+    h0 = _admissible_h(_domain_uncertain(d0), len(full0), goal_n)
     heapq.heappush(pq, (g0 + h0, _mrv_tiebreak(d0), h0, seq, g0, start))
     best_g: Dict[State, int] = {start: 0}
     best_goal_g: Optional[int] = None
@@ -170,7 +185,7 @@ def astar_solver(p: Puzzle) -> SolveResult:
                 continue
             best_g[ns] = ng
             seq += 1
-            hn = 0
+            hn = _admissible_h(_domain_uncertain(dom2), len(full2), goal_n)
             heapq.heappush(pq, (ng + hn, _mrv_tiebreak(dom2), hn, seq, ng, ns))
 
     return SolveResult(None, time.perf_counter() - t0, expanded, expanded * 0.5, True, trace=trace)
