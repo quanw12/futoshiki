@@ -13,7 +13,6 @@ BTVN/
       backward.py
       bruteforce.py
       forward.py
-    benchmark_compare.py
     ground_kb.py
     validate_outputs.py
     ui/
@@ -21,8 +20,10 @@ BTVN/
       electron/
       package.json
     futoshiki_core.py
-    solvers.py
     api_server.py
+  statistic/
+    benchmark.py
+    plot_results.py
   inputs/
     input-01.txt ... input-10.txt
   outputs/
@@ -39,16 +40,14 @@ BTVN/
 Use this flow to compare algorithms fairly (pure runs, no hidden fallback in orchestration):
 
 ```bash
-python source/benchmark_compare.py
+python statistic/benchmark.py
 python source/validate_outputs.py
 ```
 
 Benchmark behavior:
 - Uses `inputs/input-01..10.txt` (sizes `4,4,5,5,6,6,7,7,9,9`)
 - Runs `forward`, `backward`, `astar`, `backtracking`, `bruteforce` independently
-- Writes per-algorithm outputs to `outputs/<algo>-output-XX.txt`
-- Writes canonical required files to `outputs/output-XX.txt` from pure backtracking results
-- Writes comparison metrics to `outputs/benchmark-summary.json`
+- Writes comparison metrics to `benchmark_results.csv` (Excel-friendly CSV)
 
 ### Ground KB + CNF generation (DIMACS)
 
