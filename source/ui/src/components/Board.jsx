@@ -63,7 +63,7 @@ export default function Board({
         const rel = puzzle.hcons[i][j];
         const leftClue = puzzle.grid[i][j] !== 0;
         const rightClue = puzzle.grid[i][j + 1] !== 0;
-        const showRel = !(leftClue || rightClue);
+        const showRel = !(leftClue && rightClue);
         rows.push(
           <div key={`h-${i}-${j}`} className={`ineq h ${pairConflictH(puzzle, grid, i, j) ? "bad" : ""}`}>
             {showRel ? (rel === 1 ? "<" : rel === -1 ? ">" : "") : ""}
@@ -76,10 +76,10 @@ export default function Board({
         const rel = puzzle.vcons[i][j];
         const topClue = puzzle.grid[i][j] !== 0;
         const bottomClue = puzzle.grid[i + 1][j] !== 0;
-        const showRel = !(topClue || bottomClue);
+        const showRel = !(topClue && bottomClue);
         rows.push(
           <div key={`v-${i}-${j}`} className={`ineq v ${pairConflictV(puzzle, grid, i, j) ? "bad" : ""}`}>
-            {showRel ? (rel === 1 ? "^" : rel === -1 ? "v" : "") : ""}
+            {showRel ? (rel === 1 ? "v" : rel === -1 ? "^" : "") : ""}
           </div>
         );
         if (j < n - 1) rows.push(<div key={`sp-${i}-${j}`} className="ineqSpacer" />);

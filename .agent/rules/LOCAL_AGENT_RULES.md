@@ -11,6 +11,8 @@ These rules apply to all tasks executed through this repository-local harness.
 5. Before starting any task, read `.agent/skills/karpathy-guidelines/SKILL.md`.
 6. Before any algorithm-related activity, read `AI - Project 2.pdf` first and align implementation/analysis with its rubric.
    - Applies to: A* heuristic design, forward/backward chaining behavior, brute-force/backtracking comparison, testcase design, benchmark metrics, and output validation.
+7. GitHub Flow: do NOT push directly to `main`. Always use `feature/*` or `fix/*` branch → open PR.
+   - Only push directly to `main` if the user explicitly requests it.
 
 ## Tooling rules
 
