@@ -18,8 +18,8 @@ SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 if SOURCE_DIR not in sys.path:
     sys.path.insert(0, SOURCE_DIR)
 
+from algorithm import solve
 from futoshiki_core import Puzzle, is_valid_solution
-from solvers import solve
 
 AlgoName = Literal["forward", "backward", "astar", "backtracking", "bruteforce"]
 SOLVE_TIMEOUT_SEC = 300
