@@ -4,7 +4,18 @@ from __future__ import annotations
 
 import time
 
-from futoshiki_core import Puzzle, SolveResult, TraceEvent, ac3, assignment_to_grid, build_domains, domains_to_assignment, neighbors
+from futoshiki_core import (
+    Puzzle,
+    SolveResult,
+    TraceEvent,
+    ac3,
+    assignment_to_grid,
+    build_domains,
+    choose_mrv,
+    consistent_partial,
+    domains_to_assignment,
+    neighbors,
+)
 
 def _trace_new_assignments(
     trace: list[TraceEvent],
@@ -121,6 +132,71 @@ def _apply_singleton_probing(p: Puzzle, dom: dict, trace: list[TraceEvent]) -> b
     return changed
 
 
+def _assignment_consistent(p: Puzzle, asg: dict) -> bool:
+    """
+    Defensive check: AC-3 may leave conflicting singleton-singleton row/col values
+    in some edge cases, so validate complete/partial assignments explicitly.
+    """
+    for c, v in asg.items():
+        rest = dict(asg)
+        del rest[c]
+        if not consistent_partial(p, rest, c, v):
+            return False
+    return True
+
+
+def _fallback_backtracking_from_fixpoint(
+    p: Puzzle,
+    dom: dict,
+    asg: dict,
+    trace: list[TraceEvent],
+) -> tuple[dict | None, int]:
+    """
+    Continue with backtracking from the current fixpoint domains so we reuse
+    all pruning already inferred by forward chaining.
+    """
+    nodes = 0
+
+    def rec(d: dict, a: dict) -> dict | None:
+        nonlocal nodes
+        nodes += 1
+        if len(a) == p.n * p.n:
+            if not _assignment_consistent(p, a):
+                return None
+            return a
+        cell = choose_mrv(d, a)
+        for v in sorted(d[cell]):
+            trace.append(("set", cell[0], cell[1], v))
+            if not consistent_partial(p, a, cell, v):
+                trace.append(("reject", cell[0], cell[1], v))
+                continue
+            a2 = dict(a)
+            a2[cell] = v
+            d2 = {k: set(vals) for k, vals in d.items()}
+            d2[cell] = {v}
+            if not ac3(p, d2):
+                trace.append(("reject", cell[0], cell[1], v))
+                continue
+            for c, sv in domains_to_assignment(d2).items():
+                if c in a2 and a2[c] != sv:
+                    break
+                if c not in a2:
+                    trace.append(("propagate", c[0], c[1], sv))
+                a2[c] = sv
+            else:
+                if not _assignment_consistent(p, a2):
+                    trace.append(("reject", cell[0], cell[1], v))
+                    continue
+                ans = rec(d2, a2)
+                if ans is not None:
+                    trace.append(("commit", cell[0], cell[1], v))
+                    return ans
+            trace.append(("unset", cell[0], cell[1], 0))
+        return None
+
+    return rec(dom, asg), nodes
+
+
 def forward_chaining_solver(p: Puzzle) -> SolveResult:
     t0 = time.perf_counter()
     dom = build_domains(p)
@@ -160,13 +236,27 @@ def forward_chaining_solver(p: Puzzle) -> SolveResult:
             break
     asg = domains_to_assignment(dom)
     if len(asg) < p.n * p.n:
+        trace.append(("fallback", -1, -1, 0))
+        ans, bt_nodes = _fallback_backtracking_from_fixpoint(p, dom, asg, trace)
+        nodes += bt_nodes
+        runtime = time.perf_counter() - t0
+        if ans is None:
+            return SolveResult(
+                None,
+                runtime,
+                nodes,
+                nodes * 0.5,
+                True,
+                messages=["Forward fixpoint reached; fallback backtracking also failed."],
+                trace=trace,
+            )
         return SolveResult(
-            None,
-            time.perf_counter() - t0,
+            assignment_to_grid(p, ans),
+            runtime,
             nodes,
-            nodes * 0.3,
+            nodes * 0.5,
             False,
-            messages=["Forward chaining reached fixpoint without complete assignment."],
+            messages=["Forward fixpoint reached; solved by backtracking fallback from fixpoint state."],
             trace=trace,
         )
     _trace_new_assignments(trace, known, asg, "commit")
