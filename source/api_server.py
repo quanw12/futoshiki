@@ -152,7 +152,7 @@ def _render_solution_text(p: Puzzle, solved: List[List[int]]) -> str:
             vr: List[str] = []
             for j in range(p.n):
                 c = p.vcons[i][j]
-                vr.append("v" if c == 1 else "^" if c == -1 else " ")
+                vr.append("^" if c == 1 else "v" if c == -1 else " ")
                 if j < p.n - 1:
                     vr.append(" ")
             lines.append(" ".join(vr))

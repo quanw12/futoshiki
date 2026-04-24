@@ -79,7 +79,7 @@ export default function Board({
         const showRel = !(topClue && bottomClue);
         rows.push(
           <div key={`v-${i}-${j}`} className={`ineq v ${pairConflictV(puzzle, grid, i, j) ? "bad" : ""}`}>
-            {showRel ? (rel === 1 ? "v" : rel === -1 ? "^" : "") : ""}
+            {showRel ? (rel === 1 ? "^" : rel === -1 ? "v" : "") : ""}
           </div>
         );
         if (j < n - 1) rows.push(<div key={`sp-${i}-${j}`} className="ineqSpacer" />);
