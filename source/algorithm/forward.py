@@ -236,7 +236,8 @@ def forward_chaining_solver(p: Puzzle) -> SolveResult:
             break
     asg = domains_to_assignment(dom)
     if len(asg) < p.n * p.n:
-        trace.append(("fallback", -1, -1, 0))
+        remaining = p.n * p.n - len(asg)
+        trace.append(("fallback", -1, -1, remaining))
         ans, bt_nodes = _fallback_backtracking_from_fixpoint(p, dom, asg, trace)
         nodes += bt_nodes
         runtime = time.perf_counter() - t0
