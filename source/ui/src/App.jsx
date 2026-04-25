@@ -15,7 +15,14 @@ function Stat({ label, value }) {
 }
 
 function formatTraceEvent(step, idx) {
+  if (!Array.isArray(step) || step.length < 4) {
+    return `${idx + 1}. TRACE EVENT`;
+  }
   const [action, i, j, v] = step;
+  if (action === "fallback") {
+    const unresolved = Number.isFinite(v) && v >= 0 ? v : 0;
+    return `${idx + 1}. FALLBACK: Forward fixpoint reached, switch to backtracking with ${unresolved} unresolved cells`;
+  }
   const label = String(action || "").toUpperCase();
   const valueText = action === "unset" ? "∅" : `${v}`;
   return `${idx + 1}. ${label} @ (${i + 1},${j + 1}) = ${valueText}`;
@@ -76,7 +83,7 @@ export default function App() {
   }, []);
 
   const replayActions = useMemo(() => {
-    const base = trace.filter((step) => ["set", "propagate", "commit", "unset"].includes(step?.[0]));
+    const base = trace.filter((step) => ["set", "propagate", "commit", "unset", "fallback"].includes(step?.[0]));
     if (!puzzle || !solvedGrid) return base;
 
     // Build a deterministic "complete replay": raw trace + synthetic reveals
@@ -84,6 +91,7 @@ export default function App() {
     const sim = cloneGrid(puzzle.grid);
     for (const step of base) {
       const [action, i, j, v] = step;
+      if (!["set", "propagate", "commit", "unset", "reveal"].includes(action)) continue;
       if (action === "unset") sim[i][j] = 0;
       else sim[i][j] = v;
     }
