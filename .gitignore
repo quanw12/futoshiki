@@ -1,5 +1,16 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
 
+# Node / UI
 source/ui/node_modules/
 source/ui/dist/
+
+# Benchmark artefacts
+benchmark_results.csv
+statistic/*.png
+
+# IDE / agent
+.agent/
+.vscode/
